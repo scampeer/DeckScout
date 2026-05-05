@@ -1,108 +1,92 @@
 # DeckScout
 
-<p align="center">
-  <img src="assets/deckscout-logo.svg" alt="DeckScout logo" width="520" />
-</p>
+A local-first Stream Deck Nightscout glucose monitor.
+Available for both **Elgato Stream Deck** and **VSDinside / Stream Dock**.
 
-<p align="center"><strong>A local-first Stream Deck / VSDinside Nightscout monitor.</strong></p>
+DeckScout shows your latest Nightscout glucose reading directly on a key — value, trend arrow, delta, and age — color-coded for in-range, low, high, stale, and error states. Polls every 305 seconds by default (Dexcom-friendly), renders a dynamic SVG card instead of plain text, and points at your own self-hosted Nightscout URL. No cloud accounts, no third-party services.
 
-A Stream Deck / VSDinside plugin that shows your latest Nightscout glucose reading on a key.
+> ⚠️ **Not medical advice.** Do not use DeckScout for treatment decisions.
 
-## What it does
-- Polls Nightscout every 305 seconds by default
-- Renders a dynamic key card instead of plain text
-- Shows latest glucose value
-- Shows trend arrow
-- Shows reading age in minutes
-- Shows delta from the previous reading
-- Marks low / high / stale / no-data / error states visually
-- Supports **mg/dL** and **mmol/L**
+## Pick your platform
+
+| Platform | Where to look |
+|---|---|
+| 🟦 **Elgato Stream Deck** (official Elgato hardware/software) | [`elgato/`](./elgato) |
+| 🟪 **VSDinside / Stream Dock** | [`vsdinside/`](./vsdinside) |
+
+Each subfolder has a platform-specific README with install and setup instructions for that ecosystem.
+
+## What DeckScout does (both versions)
+
+- Polls Nightscout every 305 seconds by default (configurable)
+- Renders a dynamic, color-coded key card instead of plain text
+- Shows the latest glucose value, trend arrow, delta, and reading age
+- Marks low / high / stale / no-data / error / setup states visually
+- Supports mg/dL and mmol/L
 - Manual refresh on key press
+- Detailed and Compact display modes
+
+### Color states
+
+- 🟢 **green** — in range
+- 🔴 **red** — low
+- 🟡 **amber** — high
+- ⚫ **gray** — stale / no data
+- 🌹 **rose** — fetch error
+- 🔵 **blue** — setup needed
 
 ## Why Nightscout first?
-Nightscout removes most of the painful Dexcom-cloud auth work and makes a practical v1 possible.
 
-## Local-first approach
-DeckScout is currently optimized for self-hosted Nightscout setups on LAN/Tailscale-style URLs. It reads the latest entries from your Nightscout and does not expose Nightscout auth fields in the plugin UI.
+Nightscout removes most of the painful Dexcom-cloud auth work and makes a practical v1 possible. DeckScout is currently optimized for self-hosted Nightscout setups on LAN, Tailscale, or other private/HTTPS URLs.
 
-## Current UX
-The key renders a color-coded card:
-- **green**: in range
-- **red**: low
-- **amber**: high
-- **gray**: stale / no data
-- **rose**: fetch error
-- **blue**: setup needed
-
-## Project structure
-- `src/` - TypeScript source
-- `deckscout.sdPlugin/` - compiled plugin payload + manifest + property inspector
-
-## Install
-### End users
-1. Download the latest `deckscout-vX.Y.Z-vsdinside.zip` release.
-2. Import it into VSDinside / Stream Deck.
-3. Add **Glucose Monitor** to a key.
-4. Enter your Nightscout URL.
-   - LAN example: `http://192.168.40.37:1337`
-   - Tailscale HTTPS example: `https://nas.tail17fc34.ts.net`
-5. Choose units, thresholds, and compact/detailed mode.
-6. Press the key once to force a refresh.
-
-### Developers
-1. Install Node 24+.
-2. Run:
-   ```bash
-   npm install
-   npm run build
-   ```
-3. Load the `deckscout.sdPlugin` folder into VSDinside / Stream Deck.
+It does not expose Nightscout auth fields in the plugin UI today — bring a readable Nightscout endpoint and you're set. Direct Dexcom support may come later if the complexity is worth it.
 
 ## Nightscout API assumption
-DeckScout reads from:
-- `/api/v1/entries.json?count=2`
 
-The current release is intentionally local-first and assumes a readable Nightscout endpoint.
+DeckScout reads from:
+
+```
+GET /api/v1/entries.json?count=2
+```
 
 Expected fields used:
 - `sgv`
 - `direction`
 - `date` or `dateString`
 
-## Repo positioning
-Best public framing for now:
+## Releases
 
-**DeckScout — a local-first Stream Deck glucose monitor for Nightscout**
+Releases are tagged separately per platform so you can grab exactly the build you need:
 
-That keeps the setup honest while leaving room for direct Dexcom support later.
+- **Elgato:** `vX.Y.Z-elgato` → `deckscout-vX.Y.Z-elgato.zip`
+- **VSDinside:** `vX.Y.Z-vsdinside` → `deckscout-vX.Y.Z-vsdinside.zip`
 
-## Build status
-- Builds successfully with `npm run build`
-- Runtime output lands in `deckscout.sdPlugin/plugin/index.js`
-
-## Release notes focus
-- local-first Nightscout setup
-- VSDinside-compatible runtime
-- dynamic glucose card rendering
-- compact and detailed layouts
-- Tailscale HTTPS-friendly workflow
-
-## Changelog
-See [CHANGELOG.md](CHANGELOG.md).
+See the [Releases page](https://github.com/scampeer/DeckScout/releases).
 
 ## Notes
-- Dexcom data commonly updates every 5 minutes, so `305` seconds is the default poll interval.
+
+- Dexcom data commonly updates every 5 minutes, so `305` seconds is the default poll interval (the extra 5s avoids race conditions with the upstream uploader).
 - If using mmol/L, adjust thresholds accordingly. Example: `80/180 mg/dL ≈ 4.4/10.0 mmol/L`.
-- This is **not** medical advice and should not be used for treatment decisions.
+- This is not medical advice and should not be used for treatment decisions.
 
 ## Branding
-- Primary repo/doc logo: `assets/deckscout-logo.svg`
-- Plugin/action icons remain simplified for readability at tiny sizes
+
+- Primary repo/doc logo: [`assets/deckscout-logo.svg`](./assets/deckscout-logo.svg)
+- Plugin/action icons are simplified for readability at tiny sizes
 - Full wordmark is best used in GitHub/docs/release screenshots, not tiny key icons
 
-## Good next features
-- threshold presets when switching units
-- optional tiny sparkline/history action
-- alert/snooze action
-- caregiver mode / multiple profiles
-- direct Dexcom mode later if it becomes worth the complexity
+## Roadmap
+
+- Threshold presets when switching units
+- Optional tiny sparkline / history action
+- Alert/snooze action
+- Caregiver mode / multiple profiles
+- Direct Dexcom mode if it becomes worth the complexity
+
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md).
+
+## License
+
+MIT

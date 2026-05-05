@@ -8447,6 +8447,10 @@ class ActionService extends ReadOnlyActionStore {
         super();
         // Adds the action to the store.
         connection.prependListener("willAppear", (ev) => {
+            // Ensure the device exists in the store before creating the action.
+            if (!deviceStore.getDeviceById(ev.device)) {
+                deviceStore.set(new Device(ev.device, { name: ev.device, size: { columns: 5, rows: 3 }, type: 0 }, true));
+            }
             const action = ev.payload.controller === "Encoder" ? new DialAction(ev) : new KeyAction(ev);
             actionStore.set(action);
             if (actionConfig.useExperimentalMessageIdentifiers) {
@@ -8754,7 +8758,7 @@ class DeviceService extends ReadOnlyDeviceStore {
         super();
         // Add the devices from registration parameters.
         connection.once("connected", (info) => {
-            info.devices.forEach((dev) => deviceStore.set(new Device(dev.id, dev, false)));
+            (info.devices ?? []).forEach((dev) => deviceStore.set(new Device(dev.id, dev, false)));
         });
         // Add new devices that were connected.
         connection.on("deviceDidConnect", ({ device: id, deviceInfo }) => {
@@ -9243,6 +9247,7 @@ let GlucoseMonitorAction = (() => {
             const current = this.states.get(ev.action.id);
             const settings = withDefaults({ ...(current?.settings ?? {}), ...(ev.payload ?? {}) });
             this.states.set(ev.action.id, { ...(current ?? { settings }), settings });
+            await ev.action.setSettings(settings);
             await this.refresh(ev.action);
         }
         async onKeyDown(ev) {
@@ -9279,7 +9284,9 @@ let GlucoseMonitorAction = (() => {
         }
         async renderState(action, settings, display) {
             await action.setTitle('');
-            await action.setImage(buildSvg(display, settings));
+            const svg = buildSvg(display, settings);
+            const b64 = Buffer.from(svg).toString('base64');
+            await action.setImage(`data:image/svg+xml;base64,${b64}`);
         }
         schedule(action) {
             const state = this.states.get(action.id);
