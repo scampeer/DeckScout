@@ -9151,6 +9151,10 @@ function withDefaults(settings) {
 function getPollIntervalMs(settings) {
     return Math.max(60, Number(settings.pollSeconds) || DEFAULTS.pollSeconds) * 1000;
 }
+function getEntryTimestamp(entry) {
+    const ts = entry?.date ?? Date.parse(entry?.dateString ?? '');
+    return !ts || Number.isNaN(ts) ? null : ts;
+}
 async function fetchEntries(settings) {
     const base = settings.baseUrl.replace(/\/$/, '');
     const url = new URL(`${base}/api/v1/entries.json`);
@@ -9293,20 +9297,25 @@ let GlucoseMonitorAction = (() => {
                 if (!settings.baseUrl) {
                     const display = { state: 'setup', value: 'Setup', line2: 'Nightscout', footer: 'URL needed', divider: true };
                     await this.renderState(action, settings, display);
-                    this.syncCadence(actionId, display.state);
+                    this.syncCadence(actionId, display.state, null, false);
                     return;
                 }
                 const entries = await fetchEntries(settings);
+                const latestEntryDate = getEntryTimestamp(entries[0]);
+                const previousEntryDate = state.lastEntryDate;
                 const display = buildDisplay(settings, entries);
+                const sawNewEntry = latestEntryDate != null && previousEntryDate != null && latestEntryDate !== previousEntryDate;
+                if (latestEntryDate != null)
+                    state.lastEntryDate = latestEntryDate;
                 await this.renderState(action, settings, display);
-                this.syncCadence(actionId, display.state);
+                this.syncCadence(actionId, display.state, latestEntryDate, sawNewEntry);
                 if (manual)
                     await action.showOk();
             }
             catch (error) {
                 console.error('DeckScout Elgato refresh failed', error);
                 await this.renderState(action, settings, { state: 'error', value: 'Err', line2: 'Fetch fail', footer: 'Check URL', divider: true });
-                this.syncCadence(actionId, 'error');
+                this.syncCadence(actionId, 'error', null, false);
             }
             finally {
                 const latest = this.states.get(actionId);
@@ -9356,11 +9365,16 @@ let GlucoseMonitorAction = (() => {
                 return;
             await this.refresh(action);
         }
-        syncCadence(actionId, displayState) {
+        syncCadence(actionId, displayState, latestEntryDate, sawNewEntry) {
             const state = this.states.get(actionId);
             if (!state)
                 return;
-            const shouldFastPoll = displayState === 'setup' || displayState === 'nodata' || displayState === 'error' || displayState === 'stale';
+            const shouldFastPoll = displayState === 'setup'
+                || displayState === 'nodata'
+                || displayState === 'error'
+                || displayState === 'stale'
+                || latestEntryDate == null
+                || !sawNewEntry;
             if (state.fastPolling === shouldFastPoll)
                 return;
             state.fastPolling = shouldFastPoll;

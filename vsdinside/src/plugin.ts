@@ -1,6 +1,6 @@
 import WebSocket from 'ws';
 import type { RawData } from 'ws';
-import { FAST_POLL_INTERVAL_MS, buildDisplay, buildSvg, fetchEntries, getPollIntervalMs, type Display, type PluginSettings, withDefaults } from './common';
+import { FAST_POLL_INTERVAL_MS, buildDisplay, buildSvg, fetchEntries, getEntryTimestamp, getPollIntervalMs, type Display, type PluginSettings, withDefaults } from './common';
 
 type ActionState = {
   settings: Required<PluginSettings>;
@@ -9,6 +9,7 @@ type ActionState = {
   inFlight?: boolean;
   pendingRefresh?: boolean;
   fastPolling?: boolean;
+  lastEntryDate?: number | null;
 };
 type IncomingEvent = { event: string; action?: string; context?: string; payload?: any };
 
@@ -96,19 +97,23 @@ async function refresh(context: string, manual = false): Promise<void> {
     if (!settings.baseUrl) {
       const display: Display = { state: 'setup', value: 'Setup', line2: 'Nightscout', footer: 'URL needed', divider: true };
       await renderState(context, settings, display);
-      syncCadence(context, display.state);
+      syncCadence(context, display.state, null, false);
       return;
     }
 
     const entries = await fetchEntries(settings);
+    const latestEntryDate = getEntryTimestamp(entries[0]);
+    const previousEntryDate = state.lastEntryDate;
     const display = buildDisplay(settings, entries);
+    const sawNewEntry = latestEntryDate != null && previousEntryDate != null && latestEntryDate !== previousEntryDate;
+    if (latestEntryDate != null) state.lastEntryDate = latestEntryDate;
     await renderState(context, settings, display);
-    syncCadence(context, display.state);
+    syncCadence(context, display.state, latestEntryDate, sawNewEntry);
     if (manual) showOk(context);
   } catch (error) {
     console.error('DeckScout refresh failed', error);
     await renderState(context, settings, { state: 'error', value: 'Err', line2: 'Fetch fail', footer: 'Check URL', divider: true });
-    syncCadence(context, 'error');
+    syncCadence(context, 'error', null, false);
   } finally {
     const latest = actions.get(context);
     if (!latest) return;
@@ -172,11 +177,17 @@ function setImage(context: string, svg: string): void {
   ws.send(JSON.stringify({ event: 'setImage', context, payload: { target: 0, image: dataUri } }));
 }
 
-function syncCadence(context: string, displayState: Display['state']): void {
+function syncCadence(context: string, displayState: Display['state'], latestEntryDate: number | null, sawNewEntry: boolean): void {
   const state = actions.get(context);
   if (!state) return;
 
-  const shouldFastPoll = displayState === 'setup' || displayState === 'nodata' || displayState === 'error' || displayState === 'stale';
+  const shouldFastPoll = displayState === 'setup'
+    || displayState === 'nodata'
+    || displayState === 'error'
+    || displayState === 'stale'
+    || latestEntryDate == null
+    || !sawNewEntry;
+
   if (state.fastPolling === shouldFastPoll) return;
 
   state.fastPolling = shouldFastPoll;

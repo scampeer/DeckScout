@@ -5037,6 +5037,10 @@ function withDefaults(settings) {
 function getPollIntervalMs(settings) {
     return Math.max(60, Number(settings.pollSeconds) || DEFAULTS.pollSeconds) * 1000;
 }
+function getEntryTimestamp(entry) {
+    const ts = entry?.date ?? Date.parse(entry?.dateString ?? '');
+    return !ts || Number.isNaN(ts) ? null : ts;
+}
 async function fetchEntries(settings) {
     const base = settings.baseUrl.replace(/\/$/, '');
     const url = new URL(`${base}/api/v1/entries.json`);
@@ -5195,20 +5199,25 @@ async function refresh(context, manual = false) {
         if (!settings.baseUrl) {
             const display = { state: 'setup', value: 'Setup', line2: 'Nightscout', footer: 'URL needed', divider: true };
             await renderState(context, settings, display);
-            syncCadence(context, display.state);
+            syncCadence(context, display.state, null, false);
             return;
         }
         const entries = await fetchEntries(settings);
+        const latestEntryDate = getEntryTimestamp(entries[0]);
+        const previousEntryDate = state.lastEntryDate;
         const display = buildDisplay(settings, entries);
+        const sawNewEntry = latestEntryDate != null && previousEntryDate != null && latestEntryDate !== previousEntryDate;
+        if (latestEntryDate != null)
+            state.lastEntryDate = latestEntryDate;
         await renderState(context, settings, display);
-        syncCadence(context, display.state);
+        syncCadence(context, display.state, latestEntryDate, sawNewEntry);
         if (manual)
             showOk(context);
     }
     catch (error) {
         console.error('DeckScout refresh failed', error);
         await renderState(context, settings, { state: 'error', value: 'Err', line2: 'Fetch fail', footer: 'Check URL', divider: true });
-        syncCadence(context, 'error');
+        syncCadence(context, 'error', null, false);
     }
     finally {
         const latest = actions.get(context);
@@ -5267,11 +5276,16 @@ function setImage(context, svg) {
     const dataUri = `data:image/svg+xml;charset=utf8,${encodeURIComponent(svg)}`;
     ws.send(JSON.stringify({ event: 'setImage', context, payload: { target: 0, image: dataUri } }));
 }
-function syncCadence(context, displayState) {
+function syncCadence(context, displayState, latestEntryDate, sawNewEntry) {
     const state = actions.get(context);
     if (!state)
         return;
-    const shouldFastPoll = displayState === 'setup' || displayState === 'nodata' || displayState === 'error' || displayState === 'stale';
+    const shouldFastPoll = displayState === 'setup'
+        || displayState === 'nodata'
+        || displayState === 'error'
+        || displayState === 'stale'
+        || latestEntryDate == null
+        || !sawNewEntry;
     if (state.fastPolling === shouldFastPoll)
         return;
     state.fastPolling = shouldFastPoll;
