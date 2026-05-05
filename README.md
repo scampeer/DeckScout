@@ -1,4 +1,9 @@
-# DeckScout
+<p align="center">
+  <img src="assets/deckscout-logo.svg" alt="DeckScout Logo" width="450">
+</p>
+
+<h1 align="center">DeckScout</h1>
+
 
 A local-first Stream Deck Nightscout glucose monitor.
 Available for both **Elgato Stream Deck** and **VSDinside / Stream Dock**.
