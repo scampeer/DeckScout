@@ -7,8 +7,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["node"],
-    "outDir": "./deckscout.sdPlugin/plugin"
+    "types": ["node"]
   },
-  "include": ["src/plugin.ts"]
+  "include": ["src/**/*.ts"]
 }

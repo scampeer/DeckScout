@@ -1,0 +1,47 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+  "Name": "DeckScout",
+  "Version": "1.0.0.0",
+  "Author": "Shadow",
+  "Description": "A local-first Stream Deck glucose monitor for Nightscout.",
+  "SDKVersion": 2,
+  "Nodejs": {
+    "Version": "20"
+  },
+  "Software": {
+    "MinimumVersion": "6.4"
+  },
+  "OS": [
+    {
+      "Platform": "mac",
+      "MinimumVersion": "12"
+    },
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ],
+  "CodePath": "bin/plugin.js",
+  "Icon": "imgs/plugin-icon",
+  "Category": "DeckScout",
+  "CategoryIcon": "imgs/action-icon",
+  "UUID": "ai.openclaw.deckscout.elgato",
+  "Actions": [
+    {
+      "Name": "Glucose Monitor",
+      "UUID": "ai.openclaw.deckscout.elgato.monitor",
+      "Icon": "imgs/action-icon",
+      "Tooltip": "Show the latest Nightscout glucose reading.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Image": "imgs/action-icon",
+          "TitleAlignment": "middle",
+          "FontSize": "16"
+        }
+      ],
+      "PropertyInspectorPath": "ui/glucose-monitor.html"
+    }
+  ]
+}

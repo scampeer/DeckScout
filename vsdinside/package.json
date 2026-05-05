@@ -4,12 +4,15 @@
   "private": true,
   "scripts": {
     "build": "rollup -c",
+    "build:vsdinside": "rollup -c --configPlugin typescript",
+    "build:elgato": "rollup -c --configPlugin typescript",
     "watch": "rollup -c -w"
   },
   "dependencies": {
     "ws": "^8.18.3"
   },
   "devDependencies": {
+    "@elgato/streamdeck": "^2.1.0",
     "@rollup/plugin-commonjs": "^28.0.0",
     "@rollup/plugin-node-resolve": "^16.0.0",
     "@rollup/plugin-typescript": "^12.1.0",

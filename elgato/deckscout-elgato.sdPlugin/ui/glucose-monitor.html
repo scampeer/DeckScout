@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>DeckScout</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        font-family: Inter, system-ui, sans-serif;
+        margin: 0;
+        padding: 16px;
+        color: #e8eaed;
+        background: #171717;
+      }
+      .card {
+        background: #202124;
+        border: 1px solid #34373c;
+        border-radius: 14px;
+        padding: 14px;
+        margin-bottom: 14px;
+      }
+      .title {
+        font-size: 18px;
+        font-weight: 700;
+        margin: 0 0 4px;
+      }
+      .subtitle {
+        color: #a7adb5;
+        font-size: 12px;
+        margin: 0;
+      }
+      label {
+        display: block;
+        margin: 12px 0 6px;
+        font-size: 12px;
+        color: #c9cdd3;
+      }
+      input, select {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 9px 10px;
+        border-radius: 8px;
+        border: 1px solid #444;
+        background: #111;
+        color: #fff;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .check {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 12px;
+        font-size: 13px;
+      }
+      .check input {
+        width: auto;
+      }
+      button {
+        width: 100%;
+        margin-top: 14px;
+        padding: 11px 12px;
+        border: 0;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #2563eb, #3b82f6);
+        color: white;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .hint {
+        color: #9aa0a6;
+        font-size: 11px;
+        margin-top: 10px;
+        line-height: 1.45;
+      }
+      .pill {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: #0f2c1b;
+        color: #86efac;
+        font-size: 11px;
+        font-weight: 700;
+        margin-top: 8px;
+      }
+      .status {
+        font-size: 11px;
+        color: #9aa0a6;
+        margin-top: 8px;
+        text-align: center;
+        min-height: 14px;
+      }
+      .status.ok {
+        color: #86efac;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <p class="title">DeckScout</p>
+      <p class="subtitle">Nightscout glucose monitor for Stream Deck</p>
+      <div class="pill">Dexcom-friendly 305s polling</div>
+    </div>
+
+    <div class="card">
+      <label>Nightscout base URL</label>
+      <input id="baseUrl" placeholder="https://nightscout.example.com" />
+      <div class="hint">Local-first: point this at your LAN, Tailscale, or other self-hosted Nightscout URL.</div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <div>
+          <label>Units</label>
+          <select id="unit">
+            <option value="mgdl">mg/dL</option>
+            <option value="mmol">mmol/L</option>
+          </select>
+        </div>
+        <div>
+          <label>Poll every (seconds)</label>
+          <input id="pollSeconds" type="number" value="305" min="60" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Low threshold</label>
+          <input id="lowThreshold" type="number" value="80" />
+        </div>
+        <div>
+          <label>High threshold</label>
+          <input id="highThreshold" type="number" value="180" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Stale after (minutes)</label>
+          <input id="staleMinutes" type="number" value="15" min="5" />
+        </div>
+        <div>
+          <label>Display mode</label>
+          <select id="compactMode">
+            <option value="false">Detailed</option>
+            <option value="true">Compact</option>
+          </select>
+        </div>
+      </div>
+
+      <label class="check"><input id="showDelta" type="checkbox" checked /> Show delta on the key</label>
+
+      <button id="save">Save Settings</button>
+      <div class="status" id="status"></div>
+
+      <div class="hint">
+        Tip: if you switch to mmol/L, also adjust low/high thresholds to mmol equivalents.
+        Example: 80/180 mg/dL ≈ 4.4/10.0 mmol/L.
+      </div>
+    </div>
+
+    <script>
+      let websocket;
+      let context;
+      let actionUUID;
+
+      const fields = ['baseUrl', 'lowThreshold', 'highThreshold', 'staleMinutes', 'pollSeconds', 'showDelta', 'unit', 'compactMode'];
+
+      function showStatus(msg, ok) {
+        const el = document.getElementById('status');
+        if (!el) return;
+        el.textContent = msg;
+        el.className = ok ? 'status ok' : 'status';
+        if (msg) {
+          setTimeout(() => {
+            if (el.textContent === msg) {
+              el.textContent = '';
+              el.className = 'status';
+            }
+          }, 2500);
+        }
+      }
+
+      function connectElgatoStreamDeckSocket(inPort, inUUID, inRegisterEvent, inInfo, inActionInfo) {
+        let actionInfo = {};
+        try {
+          actionInfo = JSON.parse(inActionInfo || '{}');
+        } catch (e) {
+          actionInfo = {};
+        }
+        // Stream Deck routes PI messages by the registered uuid (inUUID),
+        // which is what must be used as the context for outgoing setSettings/sendToPlugin calls.
+        context = inUUID;
+        actionUUID = actionInfo.action;
+
+        websocket = new WebSocket(`ws://127.0.0.1:${inPort}`);
+
+        websocket.onopen = function () {
+          websocket.send(JSON.stringify({ event: inRegisterEvent, uuid: inUUID }));
+          hydrate(actionInfo.payload?.settings || {});
+        };
+
+        websocket.onmessage = function (evt) {
+          try {
+            const msg = JSON.parse(evt.data);
+            if (msg.event === 'didReceiveSettings') {
+              hydrate(msg.payload?.settings || {});
+            }
+          } catch (e) { /* noop */ }
+        };
+      }
+
+      function hydrate(settings) {
+        for (const field of fields) {
+          const el = document.getElementById(field);
+          if (!el) continue;
+          if (el.type === 'checkbox') {
+            el.checked = Boolean(settings[field] ?? el.checked);
+          } else if (field === 'compactMode') {
+            el.value = String(settings[field] ?? 'false');
+          } else if (settings[field] !== undefined) {
+            el.value = settings[field];
+          }
+        }
+      }
+
+      function payload() {
+        return {
+          baseUrl: document.getElementById('baseUrl').value.trim(),
+          lowThreshold: Number(document.getElementById('lowThreshold').value || 80),
+          highThreshold: Number(document.getElementById('highThreshold').value || 180),
+          staleMinutes: Number(document.getElementById('staleMinutes').value || 15),
+          pollSeconds: Number(document.getElementById('pollSeconds').value || 305),
+          showDelta: document.getElementById('showDelta').checked,
+          unit: document.getElementById('unit').value,
+          compactMode: document.getElementById('compactMode').value === 'true',
+        };
+      }
+
+      function doSave() {
+        if (!websocket || websocket.readyState !== 1) {
+          showStatus('Not connected to Stream Deck yet.', false);
+          return;
+        }
+        const settings = payload();
+        websocket.send(JSON.stringify({
+          event: 'setSettings',
+          context,
+          payload: settings
+        }));
+        websocket.send(JSON.stringify({
+          event: 'sendToPlugin',
+          action: actionUUID,
+          context,
+          payload: settings
+        }));
+        showStatus('Settings saved.', true);
+      }
+
+      window.addEventListener('DOMContentLoaded', () => {
+        const btn = document.getElementById('save');
+        if (btn) btn.addEventListener('click', doSave);
+      });
+    </script>
+  </body>
+</html>
