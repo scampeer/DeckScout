@@ -5181,9 +5181,14 @@ async function handleEvent(data) {
 }
 async function refresh(context, manual = false) {
     const state = actions.get(context);
-    if (!state || state.inFlight)
+    if (!state)
         return;
+    if (state.inFlight) {
+        state.pendingRefresh = true;
+        return;
+    }
     state.inFlight = true;
+    state.pendingRefresh = false;
     const settings = state.settings;
     try {
         if (!settings.baseUrl) {
@@ -5202,8 +5207,13 @@ async function refresh(context, manual = false) {
     }
     finally {
         const latest = actions.get(context);
-        if (latest)
-            latest.inFlight = false;
+        if (!latest)
+            return;
+        latest.inFlight = false;
+        if (latest.pendingRefresh) {
+            latest.pendingRefresh = false;
+            queueMicrotask(() => void refresh(context));
+        }
     }
 }
 async function renderState(context, settings, display) {
@@ -5232,8 +5242,10 @@ async function handleScheduledTick(context) {
     const previousNextRunAt = state.nextRunAt ?? Date.now();
     state.nextRunAt = previousNextRunAt + getPollIntervalMs(state.settings);
     scheduleAt(context, state.nextRunAt);
-    if (state.inFlight)
+    if (state.inFlight) {
+        state.pendingRefresh = true;
         return;
+    }
     await refresh(context);
 }
 function clearTimer(context) {

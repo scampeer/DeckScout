@@ -7,6 +7,7 @@ type ActionState = {
   timer?: ReturnType<typeof setTimeout>;
   nextRunAt?: number;
   inFlight?: boolean;
+  pendingRefresh?: boolean;
 };
 type IncomingEvent = { event: string; action?: string; context?: string; payload?: any };
 
@@ -80,9 +81,14 @@ async function handleEvent(data: IncomingEvent): Promise<void> {
 
 async function refresh(context: string, manual = false): Promise<void> {
   const state = actions.get(context);
-  if (!state || state.inFlight) return;
+  if (!state) return;
+  if (state.inFlight) {
+    state.pendingRefresh = true;
+    return;
+  }
 
   state.inFlight = true;
+  state.pendingRefresh = false;
   const settings = state.settings;
 
   try {
@@ -100,7 +106,12 @@ async function refresh(context: string, manual = false): Promise<void> {
     await renderState(context, settings, { state: 'error', value: 'Err', line2: 'Fetch fail', footer: 'Check URL', divider: true });
   } finally {
     const latest = actions.get(context);
-    if (latest) latest.inFlight = false;
+    if (!latest) return;
+    latest.inFlight = false;
+    if (latest.pendingRefresh) {
+      latest.pendingRefresh = false;
+      queueMicrotask(() => void refresh(context));
+    }
   }
 }
 
@@ -132,7 +143,10 @@ async function handleScheduledTick(context: string): Promise<void> {
   state.nextRunAt = previousNextRunAt + getPollIntervalMs(state.settings);
   scheduleAt(context, state.nextRunAt);
 
-  if (state.inFlight) return;
+  if (state.inFlight) {
+    state.pendingRefresh = true;
+    return;
+  }
   await refresh(context);
 }
 
