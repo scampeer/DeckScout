@@ -5013,13 +5013,13 @@ const DIRECTION_MAP = {
     NONE: '??', NOT_COMPUTABLE: '??', RATE_OUT_OF_RANGE: '??',
 };
 const STATE_COLORS = {
-    ok: { bg: '#10261a', accent: '#22c55e', text: '#ecfdf5', subtext: '#bbf7d0' },
-    low: { bg: '#3a0d15', accent: '#ef4444', text: '#fff1f2', subtext: '#fecdd3' },
-    high: { bg: '#3b2305', accent: '#f59e0b', text: '#fffbeb', subtext: '#fde68a' },
-    stale: { bg: '#1f2937', accent: '#9ca3af', text: '#f9fafb', subtext: '#d1d5db' },
-    nodata: { bg: '#1f2937', accent: '#60a5fa', text: '#eff6ff', subtext: '#bfdbfe' },
-    error: { bg: '#3b0a18', accent: '#f43f5e', text: '#fff1f2', subtext: '#fecdd3' },
-    setup: { bg: '#172554', accent: '#60a5fa', text: '#eff6ff', subtext: '#bfdbfe' },
+    ok: { bg: '#166534', accent: '#86efac', text: '#f0fdf4', subtext: '#dcfce7' },
+    low: { bg: '#991b1b', accent: '#fca5a5', text: '#fef2f2', subtext: '#fee2e2' },
+    high: { bg: '#92400e', accent: '#fcd34d', text: '#fffbeb', subtext: '#fde68a' },
+    stale: { bg: '#4b5563', accent: '#d1d5db', text: '#f9fafb', subtext: '#e5e7eb' },
+    nodata: { bg: '#1d4ed8', accent: '#93c5fd', text: '#eff6ff', subtext: '#dbeafe' },
+    error: { bg: '#9f1239', accent: '#fda4af', text: '#fff1f2', subtext: '#ffe4e6' },
+    setup: { bg: '#1e3a8a', accent: '#93c5fd', text: '#eff6ff', subtext: '#dbeafe' },
 };
 function withDefaults(settings) {
     return {
@@ -5077,25 +5077,26 @@ function buildDisplay(settings, entries) {
     const value = formatValue(latest.sgv, settings.unit);
     const renderedDelta = delta == null ? '' : formatDelta(delta, settings.unit);
     const footer = stale ? `STALE ${ageMinutes}m` : `${ageMinutes}m ago`;
+    const trendOnly = !settings.showDelta;
     const line2 = settings.compactMode
         ? renderedDelta
             ? `${trend} ${renderedDelta}`
             : trend
         : renderedDelta
             ? `${trend} ${renderedDelta}`
-            : `${trend} ${settings.unit === 'mmol' ? 'mmol/L' : 'mg/dL'}`;
-    return { state: displayState, value, line2, footer, divider: !settings.compactMode };
+            : trend;
+    return { state: displayState, value, line2, footer, divider: !settings.compactMode, trendOnly };
 }
 function buildSvg(display, settings) {
     const palette = STATE_COLORS[display.state];
     const titleSize = display.value.length >= 6 ? 28 : display.value.length >= 5 ? 33 : display.value.length >= 4 ? 38 : 44;
-    const line2Size = display.line2.length >= 12 ? 16 : display.line2.length >= 9 ? 18 : 20;
+    const line2Size = display.trendOnly ? 34 : display.line2.length >= 12 ? 16 : display.line2.length >= 9 ? 18 : 20;
     const footerSize = display.footer.length >= 10 ? 13 : 15;
     const valueY = settings.compactMode ? 60 : 56;
-    const line2Y = settings.compactMode ? 90 : 87;
+    const line2Y = display.trendOnly ? 92 : settings.compactMode ? 90 : 87;
     const dividerY = 101;
     const footerY = 121;
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144"><rect width="144" height="144" rx="24" fill="${palette.bg}"/><rect x="10" y="10" width="124" height="124" rx="18" fill="none" stroke="${palette.accent}" stroke-width="4" opacity="0.85"/><circle cx="118" cy="26" r="7" fill="${palette.accent}"/><text x="72" y="${valueY}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${titleSize}" font-weight="700" fill="${palette.text}">${escapeXml(display.value)}</text><text x="72" y="${line2Y}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${line2Size}" font-weight="600" fill="${palette.subtext}">${escapeXml(display.line2)}</text>${display.divider === false ? '' : `<line x1="24" y1="${dividerY}" x2="120" y2="${dividerY}" stroke="${palette.accent}" opacity="0.35"/>`}<text x="72" y="${footerY}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${footerSize}" fill="${palette.text}">${escapeXml(display.footer)}</text></svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144"><rect width="144" height="144" rx="24" fill="${palette.bg}"/><rect x="6" y="6" width="132" height="132" rx="22" fill="none" stroke="${palette.accent}" stroke-width="6" opacity="0.9"/><circle cx="118" cy="26" r="7" fill="${palette.accent}"/><text x="72" y="${valueY}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${titleSize}" font-weight="700" fill="${palette.text}">${escapeXml(display.value)}</text><text x="72" y="${line2Y}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${line2Size}" font-weight="700" fill="${palette.subtext}">${escapeXml(display.line2)}</text>${display.divider === false || display.trendOnly ? '' : `<line x1="24" y1="${dividerY}" x2="120" y2="${dividerY}" stroke="${palette.accent}" opacity="0.35"/>`}<text x="72" y="${footerY}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${footerSize}" fill="${palette.text}">${escapeXml(display.footer)}</text></svg>`;
 }
 function ageMinutesFor(entry) {
     const ts = entry.date ?? Date.parse(entry.dateString ?? '');
@@ -5144,7 +5145,7 @@ async function handleEvent(data) {
             if (!context)
                 return;
             const settings = withDefaults(data.payload?.settings);
-            actions.set(context, { settings, inFlight: false, fastPolling: true });
+            actions.set(context, { settings, inFlight: false, fastPolling: true, hydrated: true });
             restartCadence(context, Date.now());
             await refresh(context);
             break;
@@ -5153,8 +5154,10 @@ async function handleEvent(data) {
             if (!context)
                 return;
             const current = actions.get(context);
+            if (current?.hydrated)
+                return;
             const settings = withDefaults(data.payload?.settings ?? current?.settings);
-            actions.set(context, { ...(current ?? { settings, inFlight: false, fastPolling: true }), settings, fastPolling: true });
+            actions.set(context, { ...(current ?? { settings, inFlight: false, fastPolling: true }), settings, hydrated: true });
             restartCadence(context, Date.now());
             await refresh(context);
             break;
@@ -5177,7 +5180,12 @@ async function handleEvent(data) {
                 return;
             const current = actions.get(context);
             const settings = withDefaults({ ...(current?.settings ?? {}), ...(data.payload ?? {}) });
-            actions.set(context, { ...(current ?? { settings, inFlight: false, fastPolling: true }), settings, fastPolling: true });
+            actions.set(context, {
+                ...(current ?? { settings, inFlight: false, fastPolling: true }),
+                settings,
+                fastPolling: true,
+                hydrated: true,
+            });
             restartCadence(context, Date.now());
             await refresh(context);
             break;
