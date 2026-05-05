@@ -1,6 +1,6 @@
 import WebSocket from 'ws';
 import type { RawData } from 'ws';
-import { buildDisplay, buildSvg, fetchEntries, getPollIntervalMs, type Display, type PluginSettings, withDefaults } from './common';
+import { FAST_POLL_INTERVAL_MS, buildDisplay, buildSvg, fetchEntries, getPollIntervalMs, type Display, type PluginSettings, withDefaults } from './common';
 
 type ActionState = {
   settings: Required<PluginSettings>;
@@ -8,6 +8,7 @@ type ActionState = {
   nextRunAt?: number;
   inFlight?: boolean;
   pendingRefresh?: boolean;
+  fastPolling?: boolean;
 };
 type IncomingEvent = { event: string; action?: string; context?: string; payload?: any };
 
@@ -40,7 +41,7 @@ async function handleEvent(data: IncomingEvent): Promise<void> {
     case 'willAppear': {
       if (!context) return;
       const settings = withDefaults(data.payload?.settings);
-      actions.set(context, { settings, inFlight: false });
+      actions.set(context, { settings, inFlight: false, fastPolling: true });
       restartCadence(context, Date.now());
       await refresh(context);
       break;
@@ -49,7 +50,7 @@ async function handleEvent(data: IncomingEvent): Promise<void> {
       if (!context) return;
       const current = actions.get(context);
       const settings = withDefaults(data.payload?.settings ?? current?.settings);
-      actions.set(context, { ...(current ?? { settings, inFlight: false }), settings });
+      actions.set(context, { ...(current ?? { settings, inFlight: false, fastPolling: true }), settings, fastPolling: true });
       restartCadence(context, Date.now());
       await refresh(context);
       break;
@@ -69,7 +70,7 @@ async function handleEvent(data: IncomingEvent): Promise<void> {
       if (!context) return;
       const current = actions.get(context);
       const settings = withDefaults({ ...(current?.settings ?? {}), ...(data.payload ?? {}) });
-      actions.set(context, { ...(current ?? { settings, inFlight: false }), settings });
+      actions.set(context, { ...(current ?? { settings, inFlight: false, fastPolling: true }), settings, fastPolling: true });
       restartCadence(context, Date.now());
       await refresh(context);
       break;
@@ -93,17 +94,21 @@ async function refresh(context: string, manual = false): Promise<void> {
 
   try {
     if (!settings.baseUrl) {
-      await renderState(context, settings, { state: 'setup', value: 'Setup', line2: 'Nightscout', footer: 'URL needed', divider: true });
+      const display: Display = { state: 'setup', value: 'Setup', line2: 'Nightscout', footer: 'URL needed', divider: true };
+      await renderState(context, settings, display);
+      syncCadence(context, display.state);
       return;
     }
 
     const entries = await fetchEntries(settings);
     const display = buildDisplay(settings, entries);
     await renderState(context, settings, display);
+    syncCadence(context, display.state);
     if (manual) showOk(context);
   } catch (error) {
     console.error('DeckScout refresh failed', error);
     await renderState(context, settings, { state: 'error', value: 'Err', line2: 'Fetch fail', footer: 'Check URL', divider: true });
+    syncCadence(context, 'error');
   } finally {
     const latest = actions.get(context);
     if (!latest) return;
@@ -124,7 +129,7 @@ function restartCadence(context: string, anchorMs: number): void {
   const state = actions.get(context);
   if (!state) return;
   clearTimer(context);
-  state.nextRunAt = anchorMs + getPollIntervalMs(state.settings);
+  state.nextRunAt = anchorMs + getActiveIntervalMs(state);
   scheduleAt(context, state.nextRunAt);
 }
 
@@ -140,7 +145,7 @@ async function handleScheduledTick(context: string): Promise<void> {
   if (!state) return;
 
   const previousNextRunAt = state.nextRunAt ?? Date.now();
-  state.nextRunAt = previousNextRunAt + getPollIntervalMs(state.settings);
+  state.nextRunAt = previousNextRunAt + getActiveIntervalMs(state);
   scheduleAt(context, state.nextRunAt);
 
   if (state.inFlight) {
@@ -165,6 +170,21 @@ function setTitle(context: string, title: string): void {
 function setImage(context: string, svg: string): void {
   const dataUri = `data:image/svg+xml;charset=utf8,${encodeURIComponent(svg)}`;
   ws.send(JSON.stringify({ event: 'setImage', context, payload: { target: 0, image: dataUri } }));
+}
+
+function syncCadence(context: string, displayState: Display['state']): void {
+  const state = actions.get(context);
+  if (!state) return;
+
+  const shouldFastPoll = displayState === 'setup' || displayState === 'nodata' || displayState === 'error' || displayState === 'stale';
+  if (state.fastPolling === shouldFastPoll) return;
+
+  state.fastPolling = shouldFastPoll;
+  restartCadence(context, Date.now());
+}
+
+function getActiveIntervalMs(state: ActionState): number {
+  return state.fastPolling ? FAST_POLL_INTERVAL_MS : getPollIntervalMs(state.settings);
 }
 
 function showOk(context: string): void {

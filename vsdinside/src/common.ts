@@ -22,6 +22,8 @@ export type Entry = {
 
 export type Display = { state: ReadingState; value: string; line2: string; footer: string; divider?: boolean };
 
+export const FAST_POLL_INTERVAL_MS = 60 * 1000;
+
 export const DEFAULTS: Required<PluginSettings> = {
   baseUrl: '',
   lowThreshold: 80,
@@ -64,6 +66,13 @@ export function withDefaults(settings?: PluginSettings): Required<PluginSettings
 
 export function getPollIntervalMs(settings: Required<PluginSettings>): number {
   return Math.max(60, Number(settings.pollSeconds) || DEFAULTS.pollSeconds) * 1000;
+}
+
+export function getAdaptivePollIntervalMs(settings: Required<PluginSettings>, state: ReadingState, preferFast = false): number {
+  if (preferFast) return FAST_POLL_INTERVAL_MS;
+  return state === 'stale' || state === 'nodata' || state === 'error' || state === 'setup'
+    ? FAST_POLL_INTERVAL_MS
+    : getPollIntervalMs(settings);
 }
 
 export async function fetchEntries(settings: Required<PluginSettings>): Promise<Entry[]> {

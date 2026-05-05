@@ -4997,6 +4997,7 @@ function requireWebsocketServer () {
 
 requireWebsocketServer();
 
+const FAST_POLL_INTERVAL_MS = 60 * 1000;
 const DEFAULTS = {
     baseUrl: '',
     lowThreshold: 80,
@@ -5139,7 +5140,7 @@ async function handleEvent(data) {
             if (!context)
                 return;
             const settings = withDefaults(data.payload?.settings);
-            actions.set(context, { settings, inFlight: false });
+            actions.set(context, { settings, inFlight: false, fastPolling: true });
             restartCadence(context, Date.now());
             await refresh(context);
             break;
@@ -5149,7 +5150,7 @@ async function handleEvent(data) {
                 return;
             const current = actions.get(context);
             const settings = withDefaults(data.payload?.settings ?? current?.settings);
-            actions.set(context, { ...(current ?? { settings, inFlight: false }), settings });
+            actions.set(context, { ...(current ?? { settings, inFlight: false, fastPolling: true }), settings, fastPolling: true });
             restartCadence(context, Date.now());
             await refresh(context);
             break;
@@ -5172,7 +5173,7 @@ async function handleEvent(data) {
                 return;
             const current = actions.get(context);
             const settings = withDefaults({ ...(current?.settings ?? {}), ...(data.payload ?? {}) });
-            actions.set(context, { ...(current ?? { settings, inFlight: false }), settings });
+            actions.set(context, { ...(current ?? { settings, inFlight: false, fastPolling: true }), settings, fastPolling: true });
             restartCadence(context, Date.now());
             await refresh(context);
             break;
@@ -5192,18 +5193,22 @@ async function refresh(context, manual = false) {
     const settings = state.settings;
     try {
         if (!settings.baseUrl) {
-            await renderState(context, settings, { state: 'setup', value: 'Setup', line2: 'Nightscout', footer: 'URL needed', divider: true });
+            const display = { state: 'setup', value: 'Setup', line2: 'Nightscout', footer: 'URL needed', divider: true };
+            await renderState(context, settings, display);
+            syncCadence(context, display.state);
             return;
         }
         const entries = await fetchEntries(settings);
         const display = buildDisplay(settings, entries);
         await renderState(context, settings, display);
+        syncCadence(context, display.state);
         if (manual)
             showOk(context);
     }
     catch (error) {
         console.error('DeckScout refresh failed', error);
         await renderState(context, settings, { state: 'error', value: 'Err', line2: 'Fetch fail', footer: 'Check URL', divider: true });
+        syncCadence(context, 'error');
     }
     finally {
         const latest = actions.get(context);
@@ -5225,7 +5230,7 @@ function restartCadence(context, anchorMs) {
     if (!state)
         return;
     clearTimer(context);
-    state.nextRunAt = anchorMs + getPollIntervalMs(state.settings);
+    state.nextRunAt = anchorMs + getActiveIntervalMs(state);
     scheduleAt(context, state.nextRunAt);
 }
 function scheduleAt(context, runAt) {
@@ -5240,7 +5245,7 @@ async function handleScheduledTick(context) {
     if (!state)
         return;
     const previousNextRunAt = state.nextRunAt ?? Date.now();
-    state.nextRunAt = previousNextRunAt + getPollIntervalMs(state.settings);
+    state.nextRunAt = previousNextRunAt + getActiveIntervalMs(state);
     scheduleAt(context, state.nextRunAt);
     if (state.inFlight) {
         state.pendingRefresh = true;
@@ -5261,6 +5266,19 @@ function setTitle(context, title) {
 function setImage(context, svg) {
     const dataUri = `data:image/svg+xml;charset=utf8,${encodeURIComponent(svg)}`;
     ws.send(JSON.stringify({ event: 'setImage', context, payload: { target: 0, image: dataUri } }));
+}
+function syncCadence(context, displayState) {
+    const state = actions.get(context);
+    if (!state)
+        return;
+    const shouldFastPoll = displayState === 'setup' || displayState === 'nodata' || displayState === 'error' || displayState === 'stale';
+    if (state.fastPolling === shouldFastPoll)
+        return;
+    state.fastPolling = shouldFastPoll;
+    restartCadence(context, Date.now());
+}
+function getActiveIntervalMs(state) {
+    return state.fastPolling ? FAST_POLL_INTERVAL_MS : getPollIntervalMs(state.settings);
 }
 function showOk(context) {
     ws.send(JSON.stringify({ event: 'showOk', context }));

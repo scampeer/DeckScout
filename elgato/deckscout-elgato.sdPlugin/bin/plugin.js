@@ -9111,6 +9111,7 @@ typeof SuppressedError === "function" ? SuppressedError : function (error, suppr
     return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
 };
 
+const FAST_POLL_INTERVAL_MS = 60 * 1000;
 const DEFAULTS = {
     baseUrl: '',
     lowThreshold: 80,
@@ -9246,7 +9247,7 @@ let GlucoseMonitorAction = (() => {
             if (!ev.action.isKey())
                 return;
             const settings = withDefaults(ev.payload.settings);
-            this.states.set(ev.action.id, { settings, inFlight: false });
+            this.states.set(ev.action.id, { settings, inFlight: false, fastPolling: true });
             this.restartCadence(ev.action.id, Date.now());
             await this.refresh(ev.action);
         }
@@ -9255,7 +9256,7 @@ let GlucoseMonitorAction = (() => {
                 return;
             const current = this.states.get(ev.action.id);
             const settings = withDefaults(ev.payload.settings ?? current?.settings);
-            this.states.set(ev.action.id, { ...(current ?? { settings, inFlight: false }), settings });
+            this.states.set(ev.action.id, { ...(current ?? { settings, inFlight: false, fastPolling: true }), settings, fastPolling: true });
             this.restartCadence(ev.action.id, Date.now());
             await this.refresh(ev.action);
         }
@@ -9264,7 +9265,7 @@ let GlucoseMonitorAction = (() => {
                 return;
             const current = this.states.get(ev.action.id);
             const settings = withDefaults({ ...(current?.settings ?? {}), ...(ev.payload ?? {}) });
-            this.states.set(ev.action.id, { ...(current ?? { settings, inFlight: false }), settings });
+            this.states.set(ev.action.id, { ...(current ?? { settings, inFlight: false, fastPolling: true }), settings, fastPolling: true });
             await ev.action.setSettings(settings);
             this.restartCadence(ev.action.id, Date.now());
             await this.refresh(ev.action);
@@ -9279,29 +9280,43 @@ let GlucoseMonitorAction = (() => {
         async refresh(action, manual = false) {
             const actionId = action.id;
             const state = this.states.get(actionId);
-            if (!state || state.inFlight)
+            if (!state)
                 return;
+            if (state.inFlight) {
+                state.pendingRefresh = true;
+                return;
+            }
             state.inFlight = true;
+            state.pendingRefresh = false;
             const settings = state.settings;
             try {
                 if (!settings.baseUrl) {
-                    await this.renderState(action, settings, { state: 'setup', value: 'Setup', line2: 'Nightscout', footer: 'URL needed', divider: true });
+                    const display = { state: 'setup', value: 'Setup', line2: 'Nightscout', footer: 'URL needed', divider: true };
+                    await this.renderState(action, settings, display);
+                    this.syncCadence(actionId, display.state);
                     return;
                 }
                 const entries = await fetchEntries(settings);
                 const display = buildDisplay(settings, entries);
                 await this.renderState(action, settings, display);
+                this.syncCadence(actionId, display.state);
                 if (manual)
                     await action.showOk();
             }
             catch (error) {
                 console.error('DeckScout Elgato refresh failed', error);
                 await this.renderState(action, settings, { state: 'error', value: 'Err', line2: 'Fetch fail', footer: 'Check URL', divider: true });
+                this.syncCadence(actionId, 'error');
             }
             finally {
                 const latest = this.states.get(actionId);
-                if (latest)
-                    latest.inFlight = false;
+                if (!latest)
+                    return;
+                latest.inFlight = false;
+                if (latest.pendingRefresh) {
+                    latest.pendingRefresh = false;
+                    queueMicrotask(() => void this.refresh(action));
+                }
             }
         }
         async renderState(action, settings, display) {
@@ -9315,7 +9330,7 @@ let GlucoseMonitorAction = (() => {
             if (!state)
                 return;
             this.clearTimer(actionId);
-            state.nextRunAt = anchorMs + getPollIntervalMs(state.settings);
+            state.nextRunAt = anchorMs + this.getActiveIntervalMs(state);
             this.scheduleAt(actionId, state.nextRunAt);
         }
         scheduleAt(actionId, runAt) {
@@ -9330,14 +9345,29 @@ let GlucoseMonitorAction = (() => {
             if (!state)
                 return;
             const previousNextRunAt = state.nextRunAt ?? Date.now();
-            state.nextRunAt = previousNextRunAt + getPollIntervalMs(state.settings);
+            state.nextRunAt = previousNextRunAt + this.getActiveIntervalMs(state);
             this.scheduleAt(actionId, state.nextRunAt);
-            if (state.inFlight)
+            if (state.inFlight) {
+                state.pendingRefresh = true;
                 return;
+            }
             const action = Array.from(this.actions).find((candidate) => candidate.id === actionId);
             if (!action || !action.isKey())
                 return;
             await this.refresh(action);
+        }
+        syncCadence(actionId, displayState) {
+            const state = this.states.get(actionId);
+            if (!state)
+                return;
+            const shouldFastPoll = displayState === 'setup' || displayState === 'nodata' || displayState === 'error' || displayState === 'stale';
+            if (state.fastPolling === shouldFastPoll)
+                return;
+            state.fastPolling = shouldFastPoll;
+            this.restartCadence(actionId, Date.now());
+        }
+        getActiveIntervalMs(state) {
+            return state.fastPolling ? FAST_POLL_INTERVAL_MS : getPollIntervalMs(state.settings);
         }
         clearTimer(actionId) {
             const state = this.states.get(actionId);
