@@ -1,6 +1,13 @@
-# DeckScout
+<p align="center">
+  <img src="assets/deckscout-logo.svg" alt="DeckScout Logo" width="450">
+</p>
 
-A local-first Stream Deck Nightscout glucose monitor.
+<h1 align="center">DeckScout</h1>
+
+<p align="center">
+  A local-first Stream Deck Nightscout glucose monitor.
+</p>
+
 Available for both **Elgato Stream Deck** and **VSDinside / Stream Dock**.
 
 DeckScout shows your latest Nightscout glucose reading directly on a key — value, trend arrow, delta, and age — color-coded for in-range, low, high, stale, and error states. Polls every 305 seconds by default (Dexcom-friendly), renders a dynamic SVG card instead of plain text, and points at your own self-hosted Nightscout URL. No cloud accounts, no third-party services.
