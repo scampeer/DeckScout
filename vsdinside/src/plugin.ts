@@ -1,8 +1,13 @@
 import WebSocket from 'ws';
 import type { RawData } from 'ws';
-import { buildDisplay, buildSvg, fetchEntries, type Display, type PluginSettings, withDefaults } from './common';
+import { buildDisplay, buildSvg, fetchEntries, getPollIntervalMs, type Display, type PluginSettings, withDefaults } from './common';
 
-type ActionState = { settings: Required<PluginSettings>; timer?: ReturnType<typeof setTimeout> };
+type ActionState = {
+  settings: Required<PluginSettings>;
+  timer?: ReturnType<typeof setTimeout>;
+  nextRunAt?: number;
+  inFlight?: boolean;
+};
 type IncomingEvent = { event: string; action?: string; context?: string; payload?: any };
 
 const port = process.argv[3];
@@ -34,7 +39,8 @@ async function handleEvent(data: IncomingEvent): Promise<void> {
     case 'willAppear': {
       if (!context) return;
       const settings = withDefaults(data.payload?.settings);
-      actions.set(context, { settings });
+      actions.set(context, { settings, inFlight: false });
+      restartCadence(context, Date.now());
       await refresh(context);
       break;
     }
@@ -42,7 +48,8 @@ async function handleEvent(data: IncomingEvent): Promise<void> {
       if (!context) return;
       const current = actions.get(context);
       const settings = withDefaults(data.payload?.settings ?? current?.settings);
-      actions.set(context, { ...(current ?? { settings }), settings });
+      actions.set(context, { ...(current ?? { settings, inFlight: false }), settings });
+      restartCadence(context, Date.now());
       await refresh(context);
       break;
     }
@@ -61,7 +68,8 @@ async function handleEvent(data: IncomingEvent): Promise<void> {
       if (!context) return;
       const current = actions.get(context);
       const settings = withDefaults({ ...(current?.settings ?? {}), ...(data.payload ?? {}) });
-      actions.set(context, { ...(current ?? { settings }), settings });
+      actions.set(context, { ...(current ?? { settings, inFlight: false }), settings });
+      restartCadence(context, Date.now());
       await refresh(context);
       break;
     }
@@ -71,18 +79,18 @@ async function handleEvent(data: IncomingEvent): Promise<void> {
 }
 
 async function refresh(context: string, manual = false): Promise<void> {
-  clearTimer(context);
   const state = actions.get(context);
-  if (!state) return;
+  if (!state || state.inFlight) return;
+
+  state.inFlight = true;
   const settings = state.settings;
 
-  if (!settings.baseUrl) {
-    await renderState(context, settings, { state: 'setup', value: 'Setup', line2: 'Nightscout', footer: 'URL needed', divider: true });
-    schedule(context);
-    return;
-  }
-
   try {
+    if (!settings.baseUrl) {
+      await renderState(context, settings, { state: 'setup', value: 'Setup', line2: 'Nightscout', footer: 'URL needed', divider: true });
+      return;
+    }
+
     const entries = await fetchEntries(settings);
     const display = buildDisplay(settings, entries);
     await renderState(context, settings, display);
@@ -90,9 +98,10 @@ async function refresh(context: string, manual = false): Promise<void> {
   } catch (error) {
     console.error('DeckScout refresh failed', error);
     await renderState(context, settings, { state: 'error', value: 'Err', line2: 'Fetch fail', footer: 'Check URL', divider: true });
+  } finally {
+    const latest = actions.get(context);
+    if (latest) latest.inFlight = false;
   }
-
-  schedule(context);
 }
 
 async function renderState(context: string, settings: Required<PluginSettings>, display: Display): Promise<void> {
@@ -100,10 +109,31 @@ async function renderState(context: string, settings: Required<PluginSettings>, 
   setImage(context, buildSvg(display, settings));
 }
 
-function schedule(context: string): void {
+function restartCadence(context: string, anchorMs: number): void {
   const state = actions.get(context);
   if (!state) return;
-  state.timer = setTimeout(() => void refresh(context), Math.max(60, state.settings.pollSeconds) * 1000);
+  clearTimer(context);
+  state.nextRunAt = anchorMs + getPollIntervalMs(state.settings);
+  scheduleAt(context, state.nextRunAt);
+}
+
+function scheduleAt(context: string, runAt: number): void {
+  const state = actions.get(context);
+  if (!state) return;
+  clearTimer(context);
+  state.timer = setTimeout(() => void handleScheduledTick(context), Math.max(0, runAt - Date.now()));
+}
+
+async function handleScheduledTick(context: string): Promise<void> {
+  const state = actions.get(context);
+  if (!state) return;
+
+  const previousNextRunAt = state.nextRunAt ?? Date.now();
+  state.nextRunAt = previousNextRunAt + getPollIntervalMs(state.settings);
+  scheduleAt(context, state.nextRunAt);
+
+  if (state.inFlight) return;
+  await refresh(context);
 }
 
 function clearTimer(context: string): void {

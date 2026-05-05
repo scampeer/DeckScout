@@ -62,13 +62,30 @@ export function withDefaults(settings?: PluginSettings): Required<PluginSettings
   };
 }
 
+export function getPollIntervalMs(settings: Required<PluginSettings>): number {
+  return Math.max(60, Number(settings.pollSeconds) || DEFAULTS.pollSeconds) * 1000;
+}
+
 export async function fetchEntries(settings: Required<PluginSettings>): Promise<Entry[]> {
   const base = settings.baseUrl.replace(/\/$/, '');
   const url = new URL(`${base}/api/v1/entries.json`);
   url.searchParams.set('count', '2');
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Nightscout returned ${response.status}`);
-  return (await response.json()) as Entry[];
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) throw new Error(`Nightscout returned ${response.status}`);
+    return (await response.json()) as Entry[];
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Nightscout request timed out');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export function buildDisplay(settings: Required<PluginSettings>, entries: Entry[]): Display {

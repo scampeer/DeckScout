@@ -5033,14 +5033,30 @@ function withDefaults(settings) {
         compactMode: settings?.compactMode ?? DEFAULTS.compactMode,
     };
 }
+function getPollIntervalMs(settings) {
+    return Math.max(60, Number(settings.pollSeconds) || DEFAULTS.pollSeconds) * 1000;
+}
 async function fetchEntries(settings) {
     const base = settings.baseUrl.replace(/\/$/, '');
     const url = new URL(`${base}/api/v1/entries.json`);
     url.searchParams.set('count', '2');
-    const response = await fetch(url);
-    if (!response.ok)
-        throw new Error(`Nightscout returned ${response.status}`);
-    return (await response.json());
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    try {
+        const response = await fetch(url, { signal: controller.signal });
+        if (!response.ok)
+            throw new Error(`Nightscout returned ${response.status}`);
+        return (await response.json());
+    }
+    catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+            throw new Error('Nightscout request timed out');
+        }
+        throw error;
+    }
+    finally {
+        clearTimeout(timeout);
+    }
 }
 function buildDisplay(settings, entries) {
     const latest = entries[0];
@@ -5123,7 +5139,8 @@ async function handleEvent(data) {
             if (!context)
                 return;
             const settings = withDefaults(data.payload?.settings);
-            actions.set(context, { settings });
+            actions.set(context, { settings, inFlight: false });
+            restartCadence(context, Date.now());
             await refresh(context);
             break;
         }
@@ -5132,7 +5149,8 @@ async function handleEvent(data) {
                 return;
             const current = actions.get(context);
             const settings = withDefaults(data.payload?.settings ?? current?.settings);
-            actions.set(context, { ...(current ?? { settings }), settings });
+            actions.set(context, { ...(current ?? { settings, inFlight: false }), settings });
+            restartCadence(context, Date.now());
             await refresh(context);
             break;
         }
@@ -5154,24 +5172,24 @@ async function handleEvent(data) {
                 return;
             const current = actions.get(context);
             const settings = withDefaults({ ...(current?.settings ?? {}), ...(data.payload ?? {}) });
-            actions.set(context, { ...(current ?? { settings }), settings });
+            actions.set(context, { ...(current ?? { settings, inFlight: false }), settings });
+            restartCadence(context, Date.now());
             await refresh(context);
             break;
         }
     }
 }
 async function refresh(context, manual = false) {
-    clearTimer(context);
     const state = actions.get(context);
-    if (!state)
+    if (!state || state.inFlight)
         return;
+    state.inFlight = true;
     const settings = state.settings;
-    if (!settings.baseUrl) {
-        await renderState(context, settings, { state: 'setup', value: 'Setup', line2: 'Nightscout', footer: 'URL needed', divider: true });
-        schedule(context);
-        return;
-    }
     try {
+        if (!settings.baseUrl) {
+            await renderState(context, settings, { state: 'setup', value: 'Setup', line2: 'Nightscout', footer: 'URL needed', divider: true });
+            return;
+        }
         const entries = await fetchEntries(settings);
         const display = buildDisplay(settings, entries);
         await renderState(context, settings, display);
@@ -5182,17 +5200,41 @@ async function refresh(context, manual = false) {
         console.error('DeckScout refresh failed', error);
         await renderState(context, settings, { state: 'error', value: 'Err', line2: 'Fetch fail', footer: 'Check URL', divider: true });
     }
-    schedule(context);
+    finally {
+        const latest = actions.get(context);
+        if (latest)
+            latest.inFlight = false;
+    }
 }
 async function renderState(context, settings, display) {
     setTitle(context, '');
     setImage(context, buildSvg(display, settings));
 }
-function schedule(context) {
+function restartCadence(context, anchorMs) {
     const state = actions.get(context);
     if (!state)
         return;
-    state.timer = setTimeout(() => void refresh(context), Math.max(60, state.settings.pollSeconds) * 1000);
+    clearTimer(context);
+    state.nextRunAt = anchorMs + getPollIntervalMs(state.settings);
+    scheduleAt(context, state.nextRunAt);
+}
+function scheduleAt(context, runAt) {
+    const state = actions.get(context);
+    if (!state)
+        return;
+    clearTimer(context);
+    state.timer = setTimeout(() => void handleScheduledTick(context), Math.max(0, runAt - Date.now()));
+}
+async function handleScheduledTick(context) {
+    const state = actions.get(context);
+    if (!state)
+        return;
+    const previousNextRunAt = state.nextRunAt ?? Date.now();
+    state.nextRunAt = previousNextRunAt + getPollIntervalMs(state.settings);
+    scheduleAt(context, state.nextRunAt);
+    if (state.inFlight)
+        return;
+    await refresh(context);
 }
 function clearTimer(context) {
     const state = actions.get(context);

@@ -9147,14 +9147,30 @@ function withDefaults(settings) {
         compactMode: settings?.compactMode ?? DEFAULTS.compactMode,
     };
 }
+function getPollIntervalMs(settings) {
+    return Math.max(60, Number(settings.pollSeconds) || DEFAULTS.pollSeconds) * 1000;
+}
 async function fetchEntries(settings) {
     const base = settings.baseUrl.replace(/\/$/, '');
     const url = new URL(`${base}/api/v1/entries.json`);
     url.searchParams.set('count', '2');
-    const response = await fetch(url);
-    if (!response.ok)
-        throw new Error(`Nightscout returned ${response.status}`);
-    return (await response.json());
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    try {
+        const response = await fetch(url, { signal: controller.signal });
+        if (!response.ok)
+            throw new Error(`Nightscout returned ${response.status}`);
+        return (await response.json());
+    }
+    catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+            throw new Error('Nightscout request timed out');
+        }
+        throw error;
+    }
+    finally {
+        clearTimeout(timeout);
+    }
 }
 function buildDisplay(settings, entries) {
     const latest = entries[0];
@@ -9230,7 +9246,8 @@ let GlucoseMonitorAction = (() => {
             if (!ev.action.isKey())
                 return;
             const settings = withDefaults(ev.payload.settings);
-            this.states.set(ev.action.id, { settings });
+            this.states.set(ev.action.id, { settings, inFlight: false });
+            this.restartCadence(ev.action.id, Date.now());
             await this.refresh(ev.action);
         }
         async onDidReceiveSettings(ev) {
@@ -9238,7 +9255,8 @@ let GlucoseMonitorAction = (() => {
                 return;
             const current = this.states.get(ev.action.id);
             const settings = withDefaults(ev.payload.settings ?? current?.settings);
-            this.states.set(ev.action.id, { ...(current ?? { settings }), settings });
+            this.states.set(ev.action.id, { ...(current ?? { settings, inFlight: false }), settings });
+            this.restartCadence(ev.action.id, Date.now());
             await this.refresh(ev.action);
         }
         async onSendToPlugin(ev) {
@@ -9246,8 +9264,9 @@ let GlucoseMonitorAction = (() => {
                 return;
             const current = this.states.get(ev.action.id);
             const settings = withDefaults({ ...(current?.settings ?? {}), ...(ev.payload ?? {}) });
-            this.states.set(ev.action.id, { ...(current ?? { settings }), settings });
+            this.states.set(ev.action.id, { ...(current ?? { settings, inFlight: false }), settings });
             await ev.action.setSettings(settings);
+            this.restartCadence(ev.action.id, Date.now());
             await this.refresh(ev.action);
         }
         async onKeyDown(ev) {
@@ -9259,17 +9278,16 @@ let GlucoseMonitorAction = (() => {
         }
         async refresh(action, manual = false) {
             const actionId = action.id;
-            this.clearTimer(actionId);
             const state = this.states.get(actionId);
-            if (!state)
+            if (!state || state.inFlight)
                 return;
+            state.inFlight = true;
             const settings = state.settings;
-            if (!settings.baseUrl) {
-                await this.renderState(action, settings, { state: 'setup', value: 'Setup', line2: 'Nightscout', footer: 'URL needed', divider: true });
-                this.schedule(action);
-                return;
-            }
             try {
+                if (!settings.baseUrl) {
+                    await this.renderState(action, settings, { state: 'setup', value: 'Setup', line2: 'Nightscout', footer: 'URL needed', divider: true });
+                    return;
+                }
                 const entries = await fetchEntries(settings);
                 const display = buildDisplay(settings, entries);
                 await this.renderState(action, settings, display);
@@ -9280,7 +9298,11 @@ let GlucoseMonitorAction = (() => {
                 console.error('DeckScout Elgato refresh failed', error);
                 await this.renderState(action, settings, { state: 'error', value: 'Err', line2: 'Fetch fail', footer: 'Check URL', divider: true });
             }
-            this.schedule(action);
+            finally {
+                const latest = this.states.get(actionId);
+                if (latest)
+                    latest.inFlight = false;
+            }
         }
         async renderState(action, settings, display) {
             await action.setTitle('');
@@ -9288,11 +9310,34 @@ let GlucoseMonitorAction = (() => {
             const b64 = Buffer.from(svg).toString('base64');
             await action.setImage(`data:image/svg+xml;base64,${b64}`);
         }
-        schedule(action) {
-            const state = this.states.get(action.id);
+        restartCadence(actionId, anchorMs) {
+            const state = this.states.get(actionId);
             if (!state)
                 return;
-            state.timer = setTimeout(() => void this.refresh(action), Math.max(60, state.settings.pollSeconds) * 1000);
+            this.clearTimer(actionId);
+            state.nextRunAt = anchorMs + getPollIntervalMs(state.settings);
+            this.scheduleAt(actionId, state.nextRunAt);
+        }
+        scheduleAt(actionId, runAt) {
+            const state = this.states.get(actionId);
+            if (!state)
+                return;
+            this.clearTimer(actionId);
+            state.timer = setTimeout(() => void this.handleScheduledTick(actionId), Math.max(0, runAt - Date.now()));
+        }
+        async handleScheduledTick(actionId) {
+            const state = this.states.get(actionId);
+            if (!state)
+                return;
+            const previousNextRunAt = state.nextRunAt ?? Date.now();
+            state.nextRunAt = previousNextRunAt + getPollIntervalMs(state.settings);
+            this.scheduleAt(actionId, state.nextRunAt);
+            if (state.inFlight)
+                return;
+            const action = Array.from(this.actions).find((candidate) => candidate.id === actionId);
+            if (!action || !action.isKey())
+                return;
+            await this.refresh(action);
         }
         clearTimer(actionId) {
             const state = this.states.get(actionId);
