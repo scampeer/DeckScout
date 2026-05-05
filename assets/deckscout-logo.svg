@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 1280">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#030816"/>
+      <stop offset="100%" stop-color="#070d1f"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1f8fff"/>
+      <stop offset="100%" stop-color="#1ce7ff"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#45ff73"/>
+      <stop offset="100%" stop-color="#0fcf63"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0.8" y2="1">
+      <stop offset="0%" stop-color="#10233a"/>
+      <stop offset="100%" stop-color="#0b1628"/>
+    </linearGradient>
+    <filter id="glowBlue" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowGreen" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="1280" height="1280" fill="url(#bg)"/>
+
+  <g transform="translate(320 220)">
+    <path d="M100 40h180M360 40h180c58 0 100 42 100 100v180M640 500v180c0 58-42 100-100 100H360M280 780H100C42 780 0 738 0 680V500M0 320V140C0 82 42 40 100 40" fill="none" stroke="url(#blue)" stroke-width="10" stroke-linecap="round"/>
+
+    <g fill="#18dfff">
+      <path d="M320 0l28 50h-56z"/>
+      <path d="M320 820l28-50h-56z"/>
+      <path d="M-40 410l50-28v56z"/>
+      <path d="M680 410l-50-28v56z"/>
+    </g>
+
+    <g fill="url(#panel)" stroke="url(#blue)" stroke-width="8">
+      <rect x="40" y="80" width="140" height="140" rx="28"/>
+      <rect x="240" y="80" width="140" height="140" rx="28"/>
+      <rect x="440" y="80" width="140" height="140" rx="28" stroke="url(#green)"/>
+      <rect x="40" y="280" width="140" height="140" rx="28"/>
+      <rect x="440" y="280" width="140" height="140" rx="28"/>
+      <rect x="40" y="480" width="140" height="140" rx="28"/>
+      <rect x="240" y="480" width="140" height="140" rx="28"/>
+      <rect x="440" y="480" width="140" height="140" rx="28"/>
+    </g>
+
+    <g transform="translate(140 180)">
+      <rect x="0" y="0" width="360" height="420" rx="70" fill="#040b16" opacity="0.96"/>
+      <rect x="16" y="16" width="328" height="388" rx="58" fill="#061725" stroke="url(#blue)" stroke-width="10" filter="url(#glowBlue)"/>
+      <text x="70" y="158" font-family="Arial, Helvetica, sans-serif" font-size="132" font-weight="700" fill="#eefcff">112</text>
+      <text x="263" y="112" font-family="Arial, Helvetica, sans-serif" font-size="82" font-weight="700" fill="url(#green)">↗</text>
+      <text x="72" y="214" font-family="Arial, Helvetica, sans-serif" font-size="54" fill="#19e7ff">mg/dL</text>
+      <path d="M66 270H300" stroke="#168bc9" stroke-width="4" stroke-dasharray="10 12" opacity="0.45"/>
+      <path d="M66 338H300" stroke="#168bc9" stroke-width="4" stroke-dasharray="10 12" opacity="0.45"/>
+      <text x="292" y="280" font-family="Arial, Helvetica, sans-serif" font-size="28" fill="#93aaba">140</text>
+      <text x="305" y="348" font-family="Arial, Helvetica, sans-serif" font-size="28" fill="#93aaba">70</text>
+      <path d="M40 320C72 298 104 344 142 300C182 254 224 362 286 244" fill="none" stroke="url(#green)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" filter="url(#glowGreen)"/>
+      <circle cx="286" cy="244" r="10" fill="#45ff73"/>
+      <rect x="142" y="360" width="76" height="10" rx="5" fill="#19e7ff"/>
+    </g>
+  </g>
+
+  <g transform="translate(160 1015)">
+    <text x="0" y="0" font-family="Arial, Helvetica, sans-serif" font-size="176" font-weight="700" fill="#f5f7fb">Deck</text>
+    <text x="435" y="0" font-family="Arial, Helvetica, sans-serif" font-size="176" font-weight="700" fill="url(#blue)">Scout</text>
+  </g>
+</svg>
