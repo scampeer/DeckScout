@@ -158,6 +158,7 @@
       let uuid;
       let actionContext;
       let actionInfo;
+      let lastUnit = 'mgdl';
 
       const fields = ['baseUrl', 'lowThreshold', 'highThreshold', 'staleMinutes', 'pollSeconds', 'showDelta', 'showTimestamp', 'unit', 'compactMode'];
 
@@ -185,6 +186,7 @@
             el.value = settings[field];
           }
         }
+        lastUnit = document.getElementById('unit').value || 'mgdl';
       }
 
       function payload() {
@@ -200,6 +202,28 @@
           compactMode: document.getElementById('compactMode').value === 'true',
         };
       }
+
+      function convertThresholds(fromUnit, toUnit) {
+        if (fromUnit === toUnit) return;
+        const lowEl = document.getElementById('lowThreshold');
+        const highEl = document.getElementById('highThreshold');
+        const low = Number(lowEl.value || 0);
+        const high = Number(highEl.value || 0);
+
+        if (fromUnit === 'mgdl' && toUnit === 'mmol') {
+          lowEl.value = (low / 18).toFixed(1);
+          highEl.value = (high / 18).toFixed(1);
+        } else if (fromUnit === 'mmol' && toUnit === 'mgdl') {
+          lowEl.value = String(Math.round(low * 18));
+          highEl.value = String(Math.round(high * 18));
+        }
+      }
+
+      document.getElementById('unit').addEventListener('change', (e) => {
+        const nextUnit = e.target.value;
+        convertThresholds(lastUnit, nextUnit);
+        lastUnit = nextUnit;
+      });
 
       document.getElementById('save').addEventListener('click', () => {
         const settings = payload();
