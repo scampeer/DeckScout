@@ -24,12 +24,12 @@
   "CodePathWin": "plugin/index.js",
   "CodePathMac": "plugin/index.js",
   "Icon": "imgs/plugin-icon.svg",
-  "Category": "Health",
+  "Category": "DeckScout",
   "CategoryIcon": "imgs/plugin-icon.svg",
   "UUID": "ai.openclaw.deckscout",
   "Actions": [
     {
-      "Name": "Glucose Monitor",
+      "Name": "DeckScout",
       "UUID": "ai.openclaw.deckscout.monitor",
       "Icon": "imgs/action-icon.svg",
       "Tooltip": "Show the latest Nightscout glucose reading.",

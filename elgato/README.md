@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="../assets/deckscout-header.png" alt="DeckScout Header" width="760">
+</p>
+
 # DeckScout for Elgato Stream Deck
 
 Official Elgato Stream Deck SDK port of DeckScout.

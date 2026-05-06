@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/deckscout-logo.png" alt="DeckScout Logo" width="450">
+  <img src="assets/deckscout-header.png" alt="DeckScout Header" width="760">
 </p>
 
 <h1 align="center">DeckScout</h1>
@@ -183,7 +183,7 @@ Current release assets:
 
 ## Branding
 
-- Primary repo/doc logo: [`assets/deckscout-logo.png`](./assets/deckscout-logo.png)
+- Primary repo/doc header: [`assets/deckscout-header.png`](./assets/deckscout-header.png)
 - Previous vector mark kept at [`assets/deckscout-logo.svg`](./assets/deckscout-logo.svg)
 - Plugin/action icons are simplified for readability at tiny sizes
 - Full wordmark is best used in GitHub/docs/release screenshots, not tiny key icons

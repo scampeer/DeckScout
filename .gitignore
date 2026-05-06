@@ -2,5 +2,6 @@ node_modules/
 *.log
 .DS_Store
 *.zip
+*.streamDeckPlugin
 
 vsdinside/deckscout-elgato.sdPlugin/

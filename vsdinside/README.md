@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="../assets/deckscout-header.png" alt="DeckScout Header" width="760">
+</p>
+
 # DeckScout for VSDinside / Stream Dock
 
 The original DeckScout build, for **VSDinside** and **Stream Dock** users.

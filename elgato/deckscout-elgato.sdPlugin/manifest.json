@@ -4,12 +4,12 @@
   "Version": "1.0.8.0",
   "Author": "Shadow",
   "Description": "A local-first Stream Deck glucose monitor for Nightscout.",
-  "SDKVersion": 2,
+  "SDKVersion": 3,
   "Nodejs": {
-    "Version": "20"
+    "Version": "24"
   },
   "Software": {
-    "MinimumVersion": "6.4"
+    "MinimumVersion": "7.1"
   },
   "OS": [
     {
@@ -28,7 +28,7 @@
   "UUID": "ai.openclaw.deckscout.elgato",
   "Actions": [
     {
-      "Name": "Glucose Monitor",
+      "Name": "DeckScout",
       "UUID": "ai.openclaw.deckscout.elgato.monitor",
       "Icon": "imgs/action-icon",
       "Tooltip": "Show the latest Nightscout glucose reading.",
