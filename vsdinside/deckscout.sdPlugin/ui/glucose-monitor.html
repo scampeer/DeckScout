@@ -144,6 +144,7 @@
       </div>
 
       <label class="check"><input id="showDelta" type="checkbox" checked /> Show delta on the key</label>
+      <label class="check"><input id="showTimestamp" type="checkbox" checked /> Show timestamp on the key</label>
 
       <button id="save">Save Settings</button>
       <div class="hint">
@@ -158,7 +159,7 @@
       let actionContext;
       let actionInfo;
 
-      const fields = ['baseUrl', 'lowThreshold', 'highThreshold', 'staleMinutes', 'pollSeconds', 'showDelta', 'unit', 'compactMode'];
+      const fields = ['baseUrl', 'lowThreshold', 'highThreshold', 'staleMinutes', 'pollSeconds', 'showDelta', 'showTimestamp', 'unit', 'compactMode'];
 
       function connectElgatoStreamDeckSocket(inPort, inUUID, inRegisterEvent, inInfo, inActionInfo) {
         uuid = inUUID;
@@ -194,6 +195,7 @@
           staleMinutes: Number(document.getElementById('staleMinutes').value || 15),
           pollSeconds: Number(document.getElementById('pollSeconds').value || 305),
           showDelta: document.getElementById('showDelta').checked,
+          showTimestamp: document.getElementById('showTimestamp').checked,
           unit: document.getElementById('unit').value,
           compactMode: document.getElementById('compactMode').value === 'true',
         };

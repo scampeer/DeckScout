@@ -9,6 +9,7 @@ export type PluginSettings = {
   staleMinutes?: number;
   pollSeconds?: number;
   showDelta?: boolean;
+  showTimestamp?: boolean;
   unit?: DisplayUnit;
   compactMode?: boolean;
 };
@@ -20,7 +21,7 @@ export type Entry = {
   dateString?: string;
 };
 
-export type Display = { state: ReadingState; value: string; line2: string; footer: string; divider?: boolean; trendOnly?: boolean };
+export type Display = { state: ReadingState; value: string; line2: string; footer: string; divider?: boolean; trendOnly?: boolean; hideFooter?: boolean };
 
 export const FAST_POLL_INTERVAL_MS = 60 * 1000;
 
@@ -31,6 +32,7 @@ export const DEFAULTS: Required<PluginSettings> = {
   staleMinutes: 15,
   pollSeconds: 305,
   showDelta: true,
+  showTimestamp: true,
   unit: 'mgdl',
   compactMode: false,
 };
@@ -59,6 +61,7 @@ export function withDefaults(settings?: PluginSettings): Required<PluginSettings
     staleMinutes: Number(settings?.staleMinutes ?? DEFAULTS.staleMinutes),
     pollSeconds: Number(settings?.pollSeconds ?? DEFAULTS.pollSeconds),
     showDelta: settings?.showDelta ?? DEFAULTS.showDelta,
+    showTimestamp: settings?.showTimestamp ?? DEFAULTS.showTimestamp,
     unit: settings?.unit === 'mmol' ? 'mmol' : 'mgdl',
     compactMode: settings?.compactMode ?? DEFAULTS.compactMode,
   };
@@ -120,19 +123,19 @@ export function buildDisplay(settings: Required<PluginSettings>, entries: Entry[
       ? `${trend} ${renderedDelta}`
       : trend;
 
-  return { state: displayState, value, line2, footer, divider: !settings.compactMode, trendOnly };
+  return { state: displayState, value, line2, footer, divider: !settings.compactMode, trendOnly, hideFooter: !settings.showTimestamp };
 }
 
 export function buildSvg(display: Display, settings: Required<PluginSettings>): string {
   const palette = STATE_COLORS[display.state];
-  const titleSize = display.value.length >= 6 ? 28 : display.value.length >= 5 ? 33 : display.value.length >= 4 ? 38 : 44;
-  const line2Size = display.trendOnly ? 34 : display.line2.length >= 12 ? 16 : display.line2.length >= 9 ? 18 : 20;
+  const titleSize = display.hideFooter ? (display.value.length >= 6 ? 34 : display.value.length >= 5 ? 39 : display.value.length >= 4 ? 44 : 50) : display.value.length >= 6 ? 28 : display.value.length >= 5 ? 33 : display.value.length >= 4 ? 38 : 44;
+  const line2Size = display.trendOnly ? (display.hideFooter ? 42 : 34) : display.line2.length >= 12 ? 16 : display.line2.length >= 9 ? 18 : 20;
   const footerSize = display.footer.length >= 10 ? 13 : 15;
-  const valueY = settings.compactMode ? 60 : 56;
-  const line2Y = display.trendOnly ? 92 : settings.compactMode ? 90 : 87;
+  const valueY = display.hideFooter ? 66 : settings.compactMode ? 60 : 56;
+  const line2Y = display.trendOnly ? (display.hideFooter ? 112 : 92) : display.hideFooter ? 102 : settings.compactMode ? 90 : 87;
   const dividerY = 101;
   const footerY = 121;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144"><rect width="144" height="144" rx="24" fill="${palette.bg}"/><rect x="6" y="6" width="132" height="132" rx="22" fill="none" stroke="${palette.accent}" stroke-width="6" opacity="0.9"/><circle cx="118" cy="26" r="7" fill="${palette.accent}"/><text x="72" y="${valueY}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${titleSize}" font-weight="700" fill="${palette.text}">${escapeXml(display.value)}</text><text x="72" y="${line2Y}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${line2Size}" font-weight="700" fill="${palette.subtext}">${escapeXml(display.line2)}</text>${display.divider === false || display.trendOnly ? '' : `<line x1="24" y1="${dividerY}" x2="120" y2="${dividerY}" stroke="${palette.accent}" opacity="0.35"/>`}<text x="72" y="${footerY}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${footerSize}" fill="${palette.text}">${escapeXml(display.footer)}</text></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144"><rect width="144" height="144" rx="24" fill="${palette.bg}"/><rect x="6" y="6" width="132" height="132" rx="22" fill="none" stroke="${palette.accent}" stroke-width="6" opacity="0.9"/><circle cx="118" cy="26" r="7" fill="${palette.accent}"/><text x="72" y="${valueY}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${titleSize}" font-weight="700" fill="${palette.text}">${escapeXml(display.value)}</text><text x="72" y="${line2Y}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${line2Size}" font-weight="700" fill="${palette.subtext}">${escapeXml(display.line2)}</text>${display.hideFooter || display.divider === false || display.trendOnly ? '' : `<line x1="24" y1="${dividerY}" x2="120" y2="${dividerY}" stroke="${palette.accent}" opacity="0.35"/>`} ${display.hideFooter ? '' : `<text x="72" y="${footerY}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${footerSize}" fill="${palette.text}">${escapeXml(display.footer)}</text>`}</svg>`;
 }
 
 function ageMinutesFor(entry: Entry): number {
