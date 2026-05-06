@@ -68,6 +68,43 @@
       .check input {
         width: auto;
       }
+      .section {
+        overflow: hidden;
+      }
+      .section-toggle {
+        width: calc(100% + 28px);
+        margin: -14px -14px 0;
+        padding: 14px;
+        border: 0;
+        border-radius: 14px 14px 0 0;
+        background: transparent;
+        color: inherit;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+        text-align: left;
+      }
+      .section-toggle:hover {
+        background: rgba(255,255,255,0.03);
+      }
+      .section-toggle .title-wrap {
+        min-width: 0;
+      }
+      .section-toggle .chevron {
+        font-size: 16px;
+        color: #a7adb5;
+        margin-left: 10px;
+      }
+      .section-content {
+        padding-top: 12px;
+      }
+      .section.collapsed .section-content {
+        display: none;
+      }
+      .section.collapsed .section-toggle {
+        border-radius: 14px;
+      }
       button {
         width: 100%;
         margin-top: 14px;
@@ -98,84 +135,117 @@
     </style>
   </head>
   <body>
-    <div class="card">
-      <p class="title">DeckScout</p>
-      <p class="subtitle">Nightscout glucose monitor for Stream Deck</p>
-      <div class="pill">Dexcom-friendly 305s polling</div>
+    <div class="card section" data-section="about">
+      <button class="section-toggle" type="button" data-target="about">
+        <span class="title-wrap">
+          <p class="title">DeckScout</p>
+          <p class="subtitle">Nightscout glucose monitor for Stream Deck</p>
+        </span>
+        <span class="chevron">▾</span>
+      </button>
+      <div class="section-content">
+        <div class="pill">Dexcom-friendly 305s polling</div>
+      </div>
     </div>
 
-    <div class="card">
-      <label>Nightscout base URL</label>
-      <input id="baseUrl" placeholder="https://nightscout.example.com" />
-      <div class="hint">Local-first: point this at your LAN, Tailscale, or other self-hosted Nightscout URL.</div>
+    <div class="card section" data-section="nightscout">
+      <button class="section-toggle" type="button" data-target="nightscout">
+        <span class="title-wrap">
+          <p class="title">Nightscout</p>
+          <p class="subtitle">Connection and base URL</p>
+        </span>
+        <span class="chevron">▾</span>
+      </button>
+      <div class="section-content">
+        <label>Nightscout base URL</label>
+        <input id="baseUrl" placeholder="https://nightscout.example.com" />
+        <div class="hint">Local-first: point this at your LAN, Tailscale, or other self-hosted Nightscout URL.</div>
+      </div>
     </div>
 
-    <div class="card">
-      <div class="row">
-        <div>
-          <label>Units</label>
-          <select id="unit">
-            <option value="mgdl">mg/dL</option>
-            <option value="mmol">mmol/L</option>
-          </select>
-        </div>
-        <div>
-          <label>Poll every (seconds)</label>
-          <input id="pollSeconds" type="number" value="305" min="60" />
-        </div>
-      </div>
-
-      <div class="row">
-        <div>
-          <label>Low threshold</label>
-          <input id="lowThreshold" type="number" value="80" />
-        </div>
-        <div>
-          <label>High threshold</label>
-          <input id="highThreshold" type="number" value="180" />
-        </div>
-      </div>
-
-      <div class="row">
-        <div>
-          <label>Stale after (minutes)</label>
-          <input id="staleMinutes" type="number" value="15" min="5" />
-        </div>
-        <div>
-          <label>Display mode</label>
-          <select id="displayMode">
-            <option value="detailed">Detailed</option>
-            <option value="compact">Compact</option>
-            <option value="custom">Custom</option>
-          </select>
-        </div>
-      </div>
-
-      <label class="check"><input id="showDelta" type="checkbox" checked /> Show delta on the key</label>
-      <label class="check"><input id="showTimestamp" type="checkbox" checked /> Show timestamp on the key</label>
-      <label class="check"><input id="compactMode" type="checkbox" /> Use compact layout</label>
-
-      <div class="card">
-        <p class="subtitle">State colors</p>
+    <div class="card section" data-section="settings">
+      <button class="section-toggle" type="button" data-target="settings">
+        <span class="title-wrap">
+          <p class="title">Settings</p>
+          <p class="subtitle">Units, thresholds, layout, and timing</p>
+        </span>
+        <span class="chevron">▾</span>
+      </button>
+      <div class="section-content">
         <div class="row">
-          <div><label>In range</label><input id="okColor" type="color" value="#166534" /></div>
-          <div><label>Low</label><input id="lowColor" type="color" value="#991b1b" /></div>
+          <div>
+            <label>Units</label>
+            <select id="unit">
+              <option value="mgdl">mg/dL</option>
+              <option value="mmol">mmol/L</option>
+            </select>
+          </div>
+          <div>
+            <label>Poll every (seconds)</label>
+            <input id="pollSeconds" type="number" value="305" min="60" />
+          </div>
         </div>
-        <div class="row">
-          <div><label>High</label><input id="highColor" type="color" value="#92400e" /></div>
-          <div><label>Stale</label><input id="staleColor" type="color" value="#4b5563" /></div>
-        </div>
-        <div class="row">
-          <div><label>No data</label><input id="nodataColor" type="color" value="#1d4ed8" /></div>
-          <div><label>Error</label><input id="errorColor" type="color" value="#9f1239" /></div>
-        </div>
-        <div><label>Setup</label><input id="setupColor" type="color" value="#1e3a8a" /></div>
-      </div>
 
-      <button id="save">Save Settings</button>
-      <div class="hint">
-        Tip: switching to mmol/L auto-converts the low/high thresholds, but double-check your target ranges.
-        Example: 80/180 mg/dL ≈ 4.4/10.0 mmol/L.
+        <div class="row">
+          <div>
+            <label>Low threshold</label>
+            <input id="lowThreshold" type="number" value="80" />
+          </div>
+          <div>
+            <label>High threshold</label>
+            <input id="highThreshold" type="number" value="180" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Stale after (minutes)</label>
+            <input id="staleMinutes" type="number" value="15" min="5" />
+          </div>
+          <div>
+            <label>Display mode</label>
+            <select id="displayMode">
+              <option value="detailed">Detailed</option>
+              <option value="compact">Compact</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+        </div>
+
+        <label class="check"><input id="showDelta" type="checkbox" checked /> Show delta on the key</label>
+        <label class="check"><input id="showTimestamp" type="checkbox" checked /> Show timestamp on the key</label>
+        <label class="check"><input id="compactMode" type="checkbox" /> Use compact layout</label>
+
+        <div class="card section" data-section="colors">
+          <button class="section-toggle" type="button" data-target="colors">
+            <span class="title-wrap">
+              <p class="title">State colors</p>
+              <p class="subtitle">Customize key colors for each state</p>
+            </span>
+            <span class="chevron">▾</span>
+          </button>
+          <div class="section-content">
+            <div class="row">
+              <div><label>In range</label><input id="okColor" type="color" value="#166534" /></div>
+              <div><label>Low</label><input id="lowColor" type="color" value="#991b1b" /></div>
+            </div>
+            <div class="row">
+              <div><label>High</label><input id="highColor" type="color" value="#92400e" /></div>
+              <div><label>Stale</label><input id="staleColor" type="color" value="#4b5563" /></div>
+            </div>
+            <div class="row">
+              <div><label>No data</label><input id="nodataColor" type="color" value="#1d4ed8" /></div>
+              <div><label>Error</label><input id="errorColor" type="color" value="#9f1239" /></div>
+            </div>
+            <div><label>Setup</label><input id="setupColor" type="color" value="#1e3a8a" /></div>
+          </div>
+        </div>
+
+        <button id="save">Save Settings</button>
+        <div class="hint">
+          Tip: switching to mmol/L auto-converts the low/high thresholds, but double-check your target ranges.
+          Example: 80/180 mg/dL ≈ 4.4/10.0 mmol/L.
+        </div>
       </div>
     </div>
 
@@ -184,6 +254,7 @@
       let context;
       let actionUUID;
       let lastUnit = 'mgdl';
+      const sectionDefaults = { about: false, nightscout: false, settings: false, colors: true };
 
       const fields = ['baseUrl', 'lowThreshold', 'highThreshold', 'staleMinutes', 'pollSeconds', 'showDelta', 'showTimestamp', 'unit', 'compactMode', 'displayMode', 'okColor', 'lowColor', 'highColor', 'staleColor', 'nodataColor', 'errorColor', 'setupColor'];
 
@@ -247,6 +318,20 @@
           errorColor: document.getElementById('errorColor').value,
           setupColor: document.getElementById('setupColor').value,
         };
+      }
+
+      function setSectionCollapsed(name, collapsed) {
+        const section = document.querySelector(`.section[data-section="${name}"]`);
+        if (!section) return;
+        section.classList.toggle('collapsed', collapsed);
+        const chev = section.querySelector('.chevron');
+        if (chev) chev.textContent = collapsed ? '▸' : '▾';
+      }
+
+      function toggleSection(name) {
+        const section = document.querySelector(`.section[data-section="${name}"]`);
+        if (!section) return;
+        setSectionCollapsed(name, !section.classList.contains('collapsed'));
       }
 
       function applyDisplayMode(mode, markCustom = true) {
@@ -320,6 +405,10 @@
       window.addEventListener('DOMContentLoaded', () => {
         const btn = document.getElementById('save');
         if (btn) btn.addEventListener('click', doSave);
+        document.querySelectorAll('.section-toggle').forEach((btn) => {
+          btn.addEventListener('click', () => toggleSection(btn.dataset.target));
+        });
+        Object.entries(sectionDefaults).forEach(([name, collapsed]) => setSectionCollapsed(name, collapsed));
       });
     </script>
   </body>
