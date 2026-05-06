@@ -8,24 +8,22 @@
 A local-first Stream Deck Nightscout glucose monitor.
 Available for both **Elgato Stream Deck** and **VSDinside / Stream Dock**.
 
-DeckScout shows your latest Nightscout glucose reading directly on a key — value, trend arrow, delta, and age — color-coded for in-range, low, high, stale, and error states. Polls every 305 seconds by default (Dexcom-friendly), renders a dynamic SVG card instead of plain text, and points at your own self-hosted Nightscout URL. No cloud accounts, no third-party services.
+DeckScout shows your latest Nightscout glucose reading directly on a key — value, trend arrow, optional delta, and optional timestamp — color-coded for in-range, low, high, stale, and error states. It renders a dynamic SVG card instead of plain text and points at your own self-hosted Nightscout URL. No cloud accounts, no third-party telemetry.
 
 > ⚠️ **Not medical advice.** Do not use DeckScout for treatment decisions.
 
-## Pick your platform
+## Platform support
 
-| Platform | Where to look |
-|---|---|
-| 🟦 **Elgato Stream Deck** (official Elgato hardware/software) | [`elgato/`](./elgato) |
-| 🟪 **VSDinside / Stream Dock** | [`vsdinside/`](./vsdinside) |
+| Platform | Folder | Release asset |
+|---|---|---|
+| 🟦 **Elgato Stream Deck** | [`elgato/`](./elgato) | `DeckScout-1.0.0-elgato.zip` |
+| 🟪 **VSDinside / Stream Dock** | [`vsdinside/`](./vsdinside) | `DeckScout-0.3.0-vsdinside.zip` |
 
-Each subfolder has a platform-specific README with install and setup instructions for that ecosystem.
+## What DeckScout does
 
-## What DeckScout does (both versions)
-
-- Polls Nightscout every 305 seconds by default (configurable)
+- Polls Nightscout with adaptive timing
 - Renders a dynamic, color-coded key card instead of plain text
-- Shows the latest glucose value, trend arrow, delta, and reading age
+- Shows the latest glucose value, trend arrow, optional delta, and optional timestamp
 - Marks low / high / stale / no-data / error / setup states visually
 - Supports mg/dL and mmol/L
 - Manual refresh on key press
@@ -40,37 +38,143 @@ Each subfolder has a platform-specific README with install and setup instruction
 - 🌹 **rose** — fetch error
 - 🔵 **blue** — setup needed
 
-## Why Nightscout first?
+## General setup guide
 
-Nightscout removes most of the painful Dexcom-cloud auth work and makes a practical v1 possible. DeckScout is currently optimized for self-hosted Nightscout setups on LAN, Tailscale, or other private/HTTPS URLs.
+### 1) Get Nightscout running
 
-It does not expose Nightscout auth fields in the plugin UI today — bring a readable Nightscout endpoint and you're set. Direct Dexcom support may come later if the complexity is worth it.
+DeckScout expects a working Nightscout instance that exposes recent glucose entries.
 
-## Nightscout API assumption
+Common ways to run Nightscout:
+- Docker on a NAS, mini PC, Raspberry Pi, or VPS
+- existing hosted Nightscout deployment
+- local LAN-only instance
 
-DeckScout reads from:
+At minimum you need:
+- **Nightscout app**
+- **MongoDB**
+- a URL reachable from the machine running DeckScout
 
+Example Docker Compose shape:
+
+```yaml
+services:
+  mongo:
+    image: mongo:6
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+
+  nightscout:
+    image: nightscout/cgm-remote-monitor:latest
+    restart: unless-stopped
+    ports:
+      - "1337:1337"
+    environment:
+      - MONGO_CONNECTION=mongodb://mongo:27017/nightscout
+      - API_SECRET=your-secret-here
+      - TZ=UTC
+    depends_on:
+      - mongo
+
+volumes:
+  mongo-data:
 ```
-GET /api/v1/entries.json?count=2
+
+After startup, confirm Nightscout works in a browser:
+
+```text
+http://YOUR-HOST:1337
 ```
 
-Expected fields used:
+And confirm the API returns entries:
+
+```text
+http://YOUR-HOST:1337/api/v1/entries.json?count=2
+```
+
+DeckScout reads these Nightscout fields:
 - `sgv`
 - `direction`
 - `date` or `dateString`
 
+### 2) Feed glucose data into Nightscout
+
+DeckScout does **not** talk directly to Dexcom. It reads whatever Nightscout already has.
+
+Typical upload paths:
+- Dexcom Share-compatible uploader
+- xDrip / xDrip4iOS / Zukka / similar uploader
+- any Nightscout-compatible source that writes entries normally
+
+For iPhone users, a practical pattern is:
+- Dexcom G7 app on iPhone
+- uploader app that can send to Nightscout
+- Nightscout reachable via LAN or HTTPS/Tailscale
+
+### 3) Make Nightscout reachable from your deck software
+
+Use a URL your Stream Deck host can actually reach:
+
+- **LAN:** `http://192.168.x.x:1337`
+- **Tailscale HTTPS:** `https://your-node-name.ts.net`
+- **other HTTPS reverse proxy:** supported too
+
+If the plugin cannot reach Nightscout, it will show an error state.
+
+## Install guide
+
+### VSDinside / Stream Dock
+
+1. Download `DeckScout-0.3.0-vsdinside.zip` from the [Releases page](https://github.com/scampeer/DeckScout/releases)
+2. In VSDinside, import the plugin zip
+3. Find **Health → Glucose Monitor**
+4. Drag it onto a key
+5. Open the settings panel
+6. Enter your Nightscout base URL
+7. Choose units / thresholds / display options
+8. Save settings
+
+Recommended starting values:
+- Poll every: `305`
+- Low threshold: `80`
+- High threshold: `180`
+- Stale after: `15`
+
+### Elgato Stream Deck
+
+1. Download `DeckScout-1.0.0-elgato.zip` from the [Releases page](https://github.com/scampeer/DeckScout/releases)
+2. Fully quit the Stream Deck app
+3. Extract into the Stream Deck plugins folder:
+   - **Windows:** `%appdata%\Elgato\StreamDeck\Plugins\`
+   - **macOS:** `~/Library/Application Support/com.elgato.StreamDeck/Plugins/`
+4. Start Stream Deck again
+5. Find **DeckScout → Glucose Monitor**
+6. Drag it onto a key
+7. Enter your Nightscout base URL and save
+
+## Recommended plugin settings
+
+- **Poll every:** `305` seconds
+- **Units:** mg/dL or mmol/L
+- **Show delta:** optional
+- **Show timestamp:** optional
+- **Display mode:** detailed or compact
+
+If using mmol/L, adjust thresholds accordingly.
+Example: `80/180 mg/dL ≈ 4.4/10.0 mmol/L`.
+
 ## Releases
-
-Releases are tagged separately per platform so you can grab exactly the build you need:
-
-- **Elgato:** `vX.Y.Z-elgato` → `deckscout-vX.Y.Z-elgato.zip`
-- **VSDinside:** `vX.Y.Z-vsdinside` → `deckscout-vX.Y.Z-vsdinside.zip`
 
 See the [Releases page](https://github.com/scampeer/DeckScout/releases).
 
+Current release assets are maintained in-place for the two platform builds:
+- `DeckScout-0.3.0-vsdinside.zip`
+- `DeckScout-1.0.0-elgato.zip`
+
 ## Notes
 
-- Dexcom data commonly updates every 5 minutes, so `305` seconds is the default poll interval (the extra 5s avoids race conditions with the upstream uploader).
+- Dexcom-style sources commonly update every ~5 minutes, so `305` seconds remains the default slow poll interval.
+- DeckScout may temporarily poll faster while catching up or waiting for a fresh Nightscout entry.
 - If using mmol/L, adjust thresholds accordingly. Example: `80/180 mg/dL ≈ 4.4/10.0 mmol/L`.
 - This is not medical advice and should not be used for treatment decisions.
 
