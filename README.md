@@ -30,6 +30,7 @@ DeckScout shows your latest Nightscout glucose reading directly on a key — val
 - Detailed and Compact display modes
 - Auto-converts threshold values when switching between mg/dL and mmol/L
 - User-adjustable state colors for in-range, low, high, stale, no-data, error, and setup states
+- Matching multi-platform inspector layout for Elgato and VSDinside builds
 
 ### Color states
 
@@ -177,7 +178,7 @@ Current release assets:
 
 - Dexcom-style sources commonly update every ~5 minutes, so `305` seconds remains the default slow poll interval.
 - DeckScout may temporarily poll faster while catching up or waiting for a fresh Nightscout entry.
-- If using mmol/L, adjust thresholds accordingly. Example: `80/180 mg/dL ≈ 4.4/10.0 mmol/L`.
+- If using mmol/L, DeckScout auto-converts thresholds when you switch units, but you should still confirm your target ranges.
 - This is not medical advice and should not be used for treatment decisions.
 
 ## Branding

@@ -11,13 +11,13 @@ If you're using the **official Elgato Stream Deck app** instead, see [`../elgato
 
 ## Install (end users)
 
-1. Download the latest `deckscout-vX.Y.Z-vsdinside.zip` from the [Releases](https://github.com/scampeer/DeckScout/releases) page
+1. Download `DeckScout-0.3.12-vsdinside.zip` from the [Releases](https://github.com/scampeer/DeckScout/releases) page
 2. Import it into VSDinside / Stream Dock
 3. Add **Glucose Monitor** to a key
 4. Enter your Nightscout URL, e.g.:
    - LAN: `http://192.168.40.37:1337`
    - Tailscale HTTPS: `https://nas.tail17fc34.ts.net`
-5. Choose units, thresholds, and compact/detailed mode
+5. Choose units, thresholds, display layout, and state colors
 6. Press the key once to force a refresh
 
 ## Build from source (developers)
@@ -49,6 +49,7 @@ Runtime output lands in `deckscout.sdPlugin/plugin/index.js`.
 | Stale after | 15 min | After this many minutes without new data, the key turns grey |
 | Display mode | Detailed | Detailed shows arrow + delta + age; Compact is more minimal |
 | Show delta | on | Show the change from the previous reading |
+| State colors | defaults provided | Customize in-range / low / high / stale / no-data / error / setup colors |
 
 > **Tip:** switching to mmol/L auto-converts the low/high thresholds, but you should still confirm your target ranges. 80/180 mg/dL ≈ 4.4/10.0 mmol/L.
 

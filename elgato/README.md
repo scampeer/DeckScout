@@ -12,7 +12,7 @@ If you're using the **Elgato Stream Deck app** with Elgato hardware (Stream Deck
 
 ## Install
 
-1. Download the latest `deckscout-vX.Y.Z-elgato.zip` from the [Releases](https://github.com/scampeer/DeckScout/releases) page
+1. Download `DeckScout-1.0.8-elgato.zip` from the [Releases](https://github.com/scampeer/DeckScout/releases) page
 2. **Fully quit** the Stream Deck app (system tray → Quit, not just close window)
 3. Extract the zip into:
    - **Windows:** `%appdata%\Elgato\StreamDeck\Plugins\`
@@ -27,7 +27,7 @@ If you're using the **Elgato Stream Deck app** with Elgato hardware (Stream Deck
 4. Enter your **Nightscout base URL**, e.g.:
    - LAN: `http://192.168.1.42:1337`
    - Tailscale HTTPS: `https://nas.tail17fc34.ts.net`
-5. Adjust thresholds, units, and poll interval to taste
+5. Adjust thresholds, units, display layout, and state colors to taste
 6. Click **Save Settings**
 
 The key will start displaying your glucose within a few seconds.
@@ -44,6 +44,7 @@ The key will start displaying your glucose within a few seconds.
 | Stale after | 15 min | After this many minutes without new data, the key turns grey |
 | Display mode | Detailed | Detailed shows arrow + delta + age; Compact is more minimal |
 | Show delta | on | Show the change from the previous reading |
+| State colors | defaults provided | Customize in-range / low / high / stale / no-data / error / setup colors |
 
 > **Tip:** switching to mmol/L auto-converts the low/high thresholds, but you should still confirm your target ranges. 80/180 mg/dL ≈ 4.4/10.0 mmol/L.
 
