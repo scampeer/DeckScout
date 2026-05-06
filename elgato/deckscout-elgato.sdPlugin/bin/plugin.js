@@ -8447,10 +8447,6 @@ class ActionService extends ReadOnlyActionStore {
         super();
         // Adds the action to the store.
         connection.prependListener("willAppear", (ev) => {
-            // Ensure the device exists in the store before creating the action.
-            if (!deviceStore.getDeviceById(ev.device)) {
-                deviceStore.set(new Device(ev.device, { name: ev.device, size: { columns: 5, rows: 3 }, type: 0 }, true));
-            }
             const action = ev.payload.controller === "Encoder" ? new DialAction(ev) : new KeyAction(ev);
             actionStore.set(action);
             if (actionConfig.useExperimentalMessageIdentifiers) {
@@ -8758,7 +8754,7 @@ class DeviceService extends ReadOnlyDeviceStore {
         super();
         // Add the devices from registration parameters.
         connection.once("connected", (info) => {
-            (info.devices ?? []).forEach((dev) => deviceStore.set(new Device(dev.id, dev, false)));
+            info.devices.forEach((dev) => deviceStore.set(new Device(dev.id, dev, false)));
         });
         // Add new devices that were connected.
         connection.on("deviceDidConnect", ({ device: id, deviceInfo }) => {
@@ -9111,7 +9107,6 @@ typeof SuppressedError === "function" ? SuppressedError : function (error, suppr
     return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
 };
 
-const FAST_POLL_INTERVAL_MS = 60 * 1000;
 const DEFAULTS = {
     baseUrl: '',
     lowThreshold: 80,
@@ -9122,6 +9117,14 @@ const DEFAULTS = {
     showTimestamp: true,
     unit: 'mgdl',
     compactMode: false,
+    displayMode: 'detailed',
+    okColor: '#166534',
+    lowColor: '#991b1b',
+    highColor: '#92400e',
+    staleColor: '#4b5563',
+    nodataColor: '#1d4ed8',
+    errorColor: '#9f1239',
+    setupColor: '#1e3a8a',
 };
 const DIRECTION_MAP = {
     DoubleUp: '↑', SingleUp: '↑', FortyFiveUp: '↗', Flat: '→', FortyFiveDown: '↘', SingleDown: '↓', DoubleDown: '↓',
@@ -9137,7 +9140,7 @@ const STATE_COLORS = {
     setup: { bg: '#1e3a8a', accent: '#93c5fd', text: '#eff6ff', subtext: '#dbeafe' },
 };
 function withDefaults(settings) {
-    return {
+    const merged = {
         ...DEFAULTS,
         ...settings,
         lowThreshold: Number(settings?.lowThreshold ?? DEFAULTS.lowThreshold),
@@ -9148,14 +9151,19 @@ function withDefaults(settings) {
         showTimestamp: settings?.showTimestamp ?? DEFAULTS.showTimestamp,
         unit: settings?.unit === 'mmol' ? 'mmol' : 'mgdl',
         compactMode: settings?.compactMode ?? DEFAULTS.compactMode,
+        displayMode: settings?.displayMode === 'compact' || settings?.displayMode === 'custom' ? settings.displayMode : 'detailed',
     };
-}
-function getPollIntervalMs(settings) {
-    return Math.max(60, Number(settings.pollSeconds) || DEFAULTS.pollSeconds) * 1000;
-}
-function getEntryTimestamp(entry) {
-    const ts = entry?.date ?? Date.parse(entry?.dateString ?? '');
-    return !ts || Number.isNaN(ts) ? null : ts;
+    if (merged.displayMode === 'detailed') {
+        merged.compactMode = false;
+        merged.showDelta = true;
+        merged.showTimestamp = true;
+    }
+    else if (merged.displayMode === 'compact') {
+        merged.compactMode = true;
+        merged.showDelta = false;
+        merged.showTimestamp = false;
+    }
+    return merged;
 }
 async function fetchEntries(settings) {
     const base = settings.baseUrl.replace(/\/$/, '');
@@ -9204,7 +9212,7 @@ function buildDisplay(settings, entries) {
     return { state: displayState, value, line2, footer, divider: !settings.compactMode, trendOnly, hideFooter: !settings.showTimestamp };
 }
 function buildSvg(display, settings) {
-    const palette = STATE_COLORS[display.state];
+    const palette = getPalette(settings, display.state);
     const titleSize = display.hideFooter ? (display.value.length >= 6 ? 34 : display.value.length >= 5 ? 39 : display.value.length >= 4 ? 44 : 50) : display.value.length >= 6 ? 28 : display.value.length >= 5 ? 33 : display.value.length >= 4 ? 38 : 44;
     const line2Size = display.trendOnly ? (display.hideFooter ? 42 : 34) : display.line2.length >= 12 ? 16 : display.line2.length >= 9 ? 18 : 20;
     const footerSize = display.footer.length >= 10 ? 13 : 15;
@@ -9212,7 +9220,28 @@ function buildSvg(display, settings) {
     const line2Y = display.trendOnly ? (display.hideFooter ? 112 : 92) : display.hideFooter ? 102 : settings.compactMode ? 90 : 87;
     const dividerY = 101;
     const footerY = 121;
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144"><rect width="144" height="144" rx="24" fill="${palette.bg}"/><rect x="6" y="6" width="132" height="132" rx="22" fill="none" stroke="${palette.accent}" stroke-width="6" opacity="0.9"/><circle cx="118" cy="26" r="7" fill="${palette.accent}"/><text x="72" y="${valueY}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${titleSize}" font-weight="700" fill="${palette.text}">${escapeXml(display.value)}</text><text x="72" y="${line2Y}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${line2Size}" font-weight="700" fill="${palette.subtext}">${escapeXml(display.line2)}</text>${display.hideFooter || display.divider === false || display.trendOnly ? '' : `<line x1="24" y1="${dividerY}" x2="120" y2="${dividerY}" stroke="${palette.accent}" opacity="0.35"/>`} ${display.hideFooter ? '' : `<text x="72" y="${footerY}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${footerSize}" fill="${palette.text}">${escapeXml(display.footer)}</text>`}</svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144"><rect width="144" height="144" rx="24" fill="${palette.bg}"/><rect x="6" y="6" width="132" height="132" rx="22" fill="none" stroke="${palette.accent}" stroke-width="6" opacity="0.9"/><circle cx="118" cy="26" r="7" fill="${palette.accent}"/><text x="72" y="${valueY}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${titleSize}" font-weight="700" fill="${palette.text}">${escapeXml(display.value)}</text><text x="72" y="${line2Y}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${line2Size}" font-weight="700" fill="${palette.subtext}">${escapeXml(display.line2)}</text>${display.hideFooter || display.divider === false || display.trendOnly ? '' : `<line x1="24" y1="${dividerY}" x2="120" y2="${dividerY}" stroke="${palette.accent}" opacity="0.35"/>`}${display.hideFooter ? '' : `<text x="72" y="${footerY}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${footerSize}" fill="${palette.text}">${escapeXml(display.footer)}</text>`}</svg>`;
+}
+function getPalette(settings, state) {
+    const base = STATE_COLORS[state];
+    const bg = getStateBg(settings, state) || base.bg;
+    return {
+        bg,
+        accent: base.accent,
+        text: base.text,
+        subtext: base.subtext,
+    };
+}
+function getStateBg(settings, state) {
+    switch (state) {
+        case 'ok': return settings.okColor;
+        case 'low': return settings.lowColor;
+        case 'high': return settings.highColor;
+        case 'stale': return settings.staleColor;
+        case 'nodata': return settings.nodataColor;
+        case 'error': return settings.errorColor;
+        case 'setup': return settings.setupColor;
+    }
 }
 function ageMinutesFor(entry) {
     const ts = entry.date ?? Date.parse(entry.dateString ?? '');
@@ -9254,8 +9283,7 @@ let GlucoseMonitorAction = (() => {
             if (!ev.action.isKey())
                 return;
             const settings = withDefaults(ev.payload.settings);
-            this.states.set(ev.action.id, { settings, inFlight: false, fastPolling: true });
-            this.restartCadence(ev.action.id, Date.now());
+            this.states.set(ev.action.id, { settings });
             await this.refresh(ev.action);
         }
         async onDidReceiveSettings(ev) {
@@ -9263,8 +9291,7 @@ let GlucoseMonitorAction = (() => {
                 return;
             const current = this.states.get(ev.action.id);
             const settings = withDefaults(ev.payload.settings ?? current?.settings);
-            this.states.set(ev.action.id, { ...(current ?? { settings, inFlight: false, fastPolling: true }), settings, fastPolling: true });
-            this.restartCadence(ev.action.id, Date.now());
+            this.states.set(ev.action.id, { ...(current ?? { settings }), settings });
             await this.refresh(ev.action);
         }
         async onSendToPlugin(ev) {
@@ -9272,9 +9299,7 @@ let GlucoseMonitorAction = (() => {
                 return;
             const current = this.states.get(ev.action.id);
             const settings = withDefaults({ ...(current?.settings ?? {}), ...(ev.payload ?? {}) });
-            this.states.set(ev.action.id, { ...(current ?? { settings, inFlight: false, fastPolling: true }), settings, fastPolling: true });
-            await ev.action.setSettings(settings);
-            this.restartCadence(ev.action.id, Date.now());
+            this.states.set(ev.action.id, { ...(current ?? { settings }), settings });
             await this.refresh(ev.action);
         }
         async onKeyDown(ev) {
@@ -9286,105 +9311,38 @@ let GlucoseMonitorAction = (() => {
         }
         async refresh(action, manual = false) {
             const actionId = action.id;
+            this.clearTimer(actionId);
             const state = this.states.get(actionId);
             if (!state)
                 return;
-            if (state.inFlight) {
-                state.pendingRefresh = true;
+            const settings = state.settings;
+            if (!settings.baseUrl) {
+                await this.renderState(action, settings, { state: 'setup', value: 'Setup', line2: 'Nightscout', footer: 'URL needed', divider: true });
+                this.schedule(action);
                 return;
             }
-            state.inFlight = true;
-            state.pendingRefresh = false;
-            const settings = state.settings;
             try {
-                if (!settings.baseUrl) {
-                    const display = { state: 'setup', value: 'Setup', line2: 'Nightscout', footer: 'URL needed', divider: true };
-                    await this.renderState(action, settings, display);
-                    this.syncCadence(actionId, display.state, null, false);
-                    return;
-                }
                 const entries = await fetchEntries(settings);
-                const latestEntryDate = getEntryTimestamp(entries[0]);
-                const previousEntryDate = state.lastEntryDate;
                 const display = buildDisplay(settings, entries);
-                const sawNewEntry = latestEntryDate != null && previousEntryDate != null && latestEntryDate !== previousEntryDate;
-                if (latestEntryDate != null)
-                    state.lastEntryDate = latestEntryDate;
                 await this.renderState(action, settings, display);
-                this.syncCadence(actionId, display.state, latestEntryDate, sawNewEntry);
                 if (manual)
                     await action.showOk();
             }
             catch (error) {
                 console.error('DeckScout Elgato refresh failed', error);
                 await this.renderState(action, settings, { state: 'error', value: 'Err', line2: 'Fetch fail', footer: 'Check URL', divider: true });
-                this.syncCadence(actionId, 'error', null, false);
             }
-            finally {
-                const latest = this.states.get(actionId);
-                if (!latest)
-                    return;
-                latest.inFlight = false;
-                if (latest.pendingRefresh) {
-                    latest.pendingRefresh = false;
-                    queueMicrotask(() => void this.refresh(action));
-                }
-            }
+            this.schedule(action);
         }
         async renderState(action, settings, display) {
             await action.setTitle('');
-            const svg = buildSvg(display, settings);
-            const b64 = Buffer.from(svg).toString('base64');
-            await action.setImage(`data:image/svg+xml;base64,${b64}`);
+            await action.setImage(buildSvg(display, settings));
         }
-        restartCadence(actionId, anchorMs) {
-            const state = this.states.get(actionId);
+        schedule(action) {
+            const state = this.states.get(action.id);
             if (!state)
                 return;
-            this.clearTimer(actionId);
-            state.nextRunAt = anchorMs + this.getActiveIntervalMs(state);
-            this.scheduleAt(actionId, state.nextRunAt);
-        }
-        scheduleAt(actionId, runAt) {
-            const state = this.states.get(actionId);
-            if (!state)
-                return;
-            this.clearTimer(actionId);
-            state.timer = setTimeout(() => void this.handleScheduledTick(actionId), Math.max(0, runAt - Date.now()));
-        }
-        async handleScheduledTick(actionId) {
-            const state = this.states.get(actionId);
-            if (!state)
-                return;
-            const previousNextRunAt = state.nextRunAt ?? Date.now();
-            state.nextRunAt = previousNextRunAt + this.getActiveIntervalMs(state);
-            this.scheduleAt(actionId, state.nextRunAt);
-            if (state.inFlight) {
-                state.pendingRefresh = true;
-                return;
-            }
-            const action = Array.from(this.actions).find((candidate) => candidate.id === actionId);
-            if (!action || !action.isKey())
-                return;
-            await this.refresh(action);
-        }
-        syncCadence(actionId, displayState, latestEntryDate, sawNewEntry) {
-            const state = this.states.get(actionId);
-            if (!state)
-                return;
-            const shouldFastPoll = displayState === 'setup'
-                || displayState === 'nodata'
-                || displayState === 'error'
-                || displayState === 'stale'
-                || latestEntryDate == null
-                || !sawNewEntry;
-            if (state.fastPolling === shouldFastPoll)
-                return;
-            state.fastPolling = shouldFastPoll;
-            this.restartCadence(actionId, Date.now());
-        }
-        getActiveIntervalMs(state) {
-            return state.fastPolling ? FAST_POLL_INTERVAL_MS : getPollIntervalMs(state.settings);
+            state.timer = setTimeout(() => void this.refresh(action), Math.max(60, state.settings.pollSeconds) * 1000);
         }
         clearTimer(actionId) {
             const state = this.states.get(actionId);

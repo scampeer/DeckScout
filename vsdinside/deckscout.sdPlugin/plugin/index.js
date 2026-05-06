@@ -5008,6 +5008,14 @@ const DEFAULTS = {
     showTimestamp: true,
     unit: 'mgdl',
     compactMode: false,
+    displayMode: 'detailed',
+    okColor: '#166534',
+    lowColor: '#991b1b',
+    highColor: '#92400e',
+    staleColor: '#4b5563',
+    nodataColor: '#1d4ed8',
+    errorColor: '#9f1239',
+    setupColor: '#1e3a8a',
 };
 const DIRECTION_MAP = {
     DoubleUp: '↑', SingleUp: '↑', FortyFiveUp: '↗', Flat: '→', FortyFiveDown: '↘', SingleDown: '↓', DoubleDown: '↓',
@@ -5023,7 +5031,7 @@ const STATE_COLORS = {
     setup: { bg: '#1e3a8a', accent: '#93c5fd', text: '#eff6ff', subtext: '#dbeafe' },
 };
 function withDefaults(settings) {
-    return {
+    const merged = {
         ...DEFAULTS,
         ...settings,
         lowThreshold: Number(settings?.lowThreshold ?? DEFAULTS.lowThreshold),
@@ -5034,7 +5042,19 @@ function withDefaults(settings) {
         showTimestamp: settings?.showTimestamp ?? DEFAULTS.showTimestamp,
         unit: settings?.unit === 'mmol' ? 'mmol' : 'mgdl',
         compactMode: settings?.compactMode ?? DEFAULTS.compactMode,
+        displayMode: settings?.displayMode === 'compact' || settings?.displayMode === 'custom' ? settings.displayMode : 'detailed',
     };
+    if (merged.displayMode === 'detailed') {
+        merged.compactMode = false;
+        merged.showDelta = true;
+        merged.showTimestamp = true;
+    }
+    else if (merged.displayMode === 'compact') {
+        merged.compactMode = true;
+        merged.showDelta = false;
+        merged.showTimestamp = false;
+    }
+    return merged;
 }
 function getPollIntervalMs(settings) {
     return Math.max(60, Number(settings.pollSeconds) || DEFAULTS.pollSeconds) * 1000;
@@ -5090,7 +5110,7 @@ function buildDisplay(settings, entries) {
     return { state: displayState, value, line2, footer, divider: !settings.compactMode, trendOnly, hideFooter: !settings.showTimestamp };
 }
 function buildSvg(display, settings) {
-    const palette = STATE_COLORS[display.state];
+    const palette = getPalette(settings, display.state);
     const titleSize = display.hideFooter ? (display.value.length >= 6 ? 34 : display.value.length >= 5 ? 39 : display.value.length >= 4 ? 44 : 50) : display.value.length >= 6 ? 28 : display.value.length >= 5 ? 33 : display.value.length >= 4 ? 38 : 44;
     const line2Size = display.trendOnly ? (display.hideFooter ? 42 : 34) : display.line2.length >= 12 ? 16 : display.line2.length >= 9 ? 18 : 20;
     const footerSize = display.footer.length >= 10 ? 13 : 15;
@@ -5098,7 +5118,28 @@ function buildSvg(display, settings) {
     const line2Y = display.trendOnly ? (display.hideFooter ? 112 : 92) : display.hideFooter ? 102 : settings.compactMode ? 90 : 87;
     const dividerY = 101;
     const footerY = 121;
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144"><rect width="144" height="144" rx="24" fill="${palette.bg}"/><rect x="6" y="6" width="132" height="132" rx="22" fill="none" stroke="${palette.accent}" stroke-width="6" opacity="0.9"/><circle cx="118" cy="26" r="7" fill="${palette.accent}"/><text x="72" y="${valueY}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${titleSize}" font-weight="700" fill="${palette.text}">${escapeXml(display.value)}</text><text x="72" y="${line2Y}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${line2Size}" font-weight="700" fill="${palette.subtext}">${escapeXml(display.line2)}</text>${display.hideFooter || display.divider === false || display.trendOnly ? '' : `<line x1="24" y1="${dividerY}" x2="120" y2="${dividerY}" stroke="${palette.accent}" opacity="0.35"/>`} ${display.hideFooter ? '' : `<text x="72" y="${footerY}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${footerSize}" fill="${palette.text}">${escapeXml(display.footer)}</text>`}</svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144"><rect width="144" height="144" rx="24" fill="${palette.bg}"/><rect x="6" y="6" width="132" height="132" rx="22" fill="none" stroke="${palette.accent}" stroke-width="6" opacity="0.9"/><circle cx="118" cy="26" r="7" fill="${palette.accent}"/><text x="72" y="${valueY}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${titleSize}" font-weight="700" fill="${palette.text}">${escapeXml(display.value)}</text><text x="72" y="${line2Y}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${line2Size}" font-weight="700" fill="${palette.subtext}">${escapeXml(display.line2)}</text>${display.hideFooter || display.divider === false || display.trendOnly ? '' : `<line x1="24" y1="${dividerY}" x2="120" y2="${dividerY}" stroke="${palette.accent}" opacity="0.35"/>`}${display.hideFooter ? '' : `<text x="72" y="${footerY}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${footerSize}" fill="${palette.text}">${escapeXml(display.footer)}</text>`}</svg>`;
+}
+function getPalette(settings, state) {
+    const base = STATE_COLORS[state];
+    const bg = getStateBg(settings, state) || base.bg;
+    return {
+        bg,
+        accent: base.accent,
+        text: base.text,
+        subtext: base.subtext,
+    };
+}
+function getStateBg(settings, state) {
+    switch (state) {
+        case 'ok': return settings.okColor;
+        case 'low': return settings.lowColor;
+        case 'high': return settings.highColor;
+        case 'stale': return settings.staleColor;
+        case 'nodata': return settings.nodataColor;
+        case 'error': return settings.errorColor;
+        case 'setup': return settings.setupColor;
+    }
 }
 function ageMinutesFor(entry) {
     const ts = entry.date ?? Date.parse(entry.dateString ?? '');
@@ -5299,7 +5340,8 @@ function syncCadence(context, displayState, latestEntryDate, sawNewEntry) {
     if (state.fastPolling === shouldFastPoll)
         return;
     state.fastPolling = shouldFastPoll;
-    restartCadence(context, Date.now());
+    const anchorMs = shouldFastPoll ? Date.now() : (state.lastEntryDate ?? Date.now());
+    restartCadence(context, anchorMs);
 }
 function getActiveIntervalMs(state) {
     return state.fastPolling ? FAST_POLL_INTERVAL_MS : getPollIntervalMs(state.settings);

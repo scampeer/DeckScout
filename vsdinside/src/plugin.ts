@@ -10,6 +10,7 @@ type ActionState = {
   pendingRefresh?: boolean;
   fastPolling?: boolean;
   lastEntryDate?: number | null;
+  hydrated?: boolean;
 };
 type IncomingEvent = { event: string; action?: string; context?: string; payload?: any };
 
@@ -42,7 +43,7 @@ async function handleEvent(data: IncomingEvent): Promise<void> {
     case 'willAppear': {
       if (!context) return;
       const settings = withDefaults(data.payload?.settings);
-      actions.set(context, { settings, inFlight: false, fastPolling: true });
+      actions.set(context, { settings, inFlight: false, fastPolling: true, hydrated: true });
       restartCadence(context, Date.now());
       await refresh(context);
       break;
@@ -50,8 +51,10 @@ async function handleEvent(data: IncomingEvent): Promise<void> {
     case 'didReceiveSettings': {
       if (!context) return;
       const current = actions.get(context);
+      if (current?.hydrated) return;
+
       const settings = withDefaults(data.payload?.settings ?? current?.settings);
-      actions.set(context, { ...(current ?? { settings, inFlight: false, fastPolling: true }), settings, fastPolling: true });
+      actions.set(context, { ...(current ?? { settings, inFlight: false, fastPolling: true }), settings, hydrated: true });
       restartCadence(context, Date.now());
       await refresh(context);
       break;
@@ -71,7 +74,12 @@ async function handleEvent(data: IncomingEvent): Promise<void> {
       if (!context) return;
       const current = actions.get(context);
       const settings = withDefaults({ ...(current?.settings ?? {}), ...(data.payload ?? {}) });
-      actions.set(context, { ...(current ?? { settings, inFlight: false, fastPolling: true }), settings, fastPolling: true });
+      actions.set(context, {
+        ...(current ?? { settings, inFlight: false, fastPolling: true }),
+        settings,
+        fastPolling: true,
+        hydrated: true,
+      });
       restartCadence(context, Date.now());
       await refresh(context);
       break;
@@ -191,7 +199,8 @@ function syncCadence(context: string, displayState: Display['state'], latestEntr
   if (state.fastPolling === shouldFastPoll) return;
 
   state.fastPolling = shouldFastPoll;
-  restartCadence(context, Date.now());
+  const anchorMs = shouldFastPoll ? Date.now() : (state.lastEntryDate ?? Date.now());
+  restartCadence(context, anchorMs);
 }
 
 function getActiveIntervalMs(state: ActionState): number {

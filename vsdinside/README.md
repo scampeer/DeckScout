@@ -50,6 +50,8 @@ Runtime output lands in `deckscout.sdPlugin/plugin/index.js`.
 | Display mode | Detailed | Detailed shows arrow + delta + age; Compact is more minimal |
 | Show delta | on | Show the change from the previous reading |
 
+> **Tip:** switching to mmol/L auto-converts the low/high thresholds, but you should still confirm your target ranges. 80/180 mg/dL ≈ 4.4/10.0 mmol/L.
+
 ## Privacy
 
 DeckScout makes HTTP/HTTPS requests **only** to the Nightscout URL you configure. It does not phone home, does not collect telemetry, and stores all settings locally. The URL never leaves your machine.

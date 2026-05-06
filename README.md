@@ -16,8 +16,8 @@ DeckScout shows your latest Nightscout glucose reading directly on a key — val
 
 | Platform | Folder | Release asset |
 |---|---|---|
-| 🟦 **Elgato Stream Deck** | [`elgato/`](./elgato) | `DeckScout-1.0.0-elgato.zip` |
-| 🟪 **VSDinside / Stream Dock** | [`vsdinside/`](./vsdinside) | `DeckScout-0.3.0-vsdinside.zip` |
+| 🟦 **Elgato Stream Deck** | [`elgato/`](./elgato) | `DeckScout-1.0.8-elgato.zip` |
+| 🟪 **VSDinside / Stream Dock** | [`vsdinside/`](./vsdinside) | `DeckScout-0.3.12-vsdinside.zip` |
 
 ## What DeckScout does
 
@@ -28,6 +28,8 @@ DeckScout shows your latest Nightscout glucose reading directly on a key — val
 - Supports mg/dL and mmol/L
 - Manual refresh on key press
 - Detailed and Compact display modes
+- Auto-converts threshold values when switching between mg/dL and mmol/L
+- User-adjustable state colors for in-range, low, high, stale, no-data, error, and setup states
 
 ### Color states
 
@@ -125,7 +127,7 @@ If the plugin cannot reach Nightscout, it will show an error state.
 
 ### VSDinside / Stream Dock
 
-1. Download `DeckScout-0.3.0-vsdinside.zip` from the [Releases page](https://github.com/scampeer/DeckScout/releases)
+1. Download `DeckScout-0.3.12-vsdinside.zip` from the [Releases page](https://github.com/scampeer/DeckScout/releases)
 2. In VSDinside, import the plugin zip
 3. Find **Health → Glucose Monitor**
 4. Drag it onto a key
@@ -142,7 +144,7 @@ Recommended starting values:
 
 ### Elgato Stream Deck
 
-1. Download `DeckScout-1.0.0-elgato.zip` from the [Releases page](https://github.com/scampeer/DeckScout/releases)
+1. Download `DeckScout-1.0.8-elgato.zip` from the [Releases page](https://github.com/scampeer/DeckScout/releases)
 2. Fully quit the Stream Deck app
 3. Extract into the Stream Deck plugins folder:
    - **Windows:** `%appdata%\Elgato\StreamDeck\Plugins\`
@@ -160,16 +162,16 @@ Recommended starting values:
 - **Show timestamp:** optional
 - **Display mode:** detailed or compact
 
-If using mmol/L, adjust thresholds accordingly.
+If using mmol/L, DeckScout auto-converts the thresholds when you switch units, but you should still confirm your target ranges.
 Example: `80/180 mg/dL ≈ 4.4/10.0 mmol/L`.
 
 ## Releases
 
 See the [Releases page](https://github.com/scampeer/DeckScout/releases).
 
-Current release assets are maintained in-place for the two platform builds:
-- `DeckScout-0.3.0-vsdinside.zip`
-- `DeckScout-1.0.0-elgato.zip`
+Current release assets:
+- `DeckScout-0.3.12-vsdinside.zip`
+- `DeckScout-1.0.8-elgato.zip`
 
 ## Notes
 
@@ -187,7 +189,6 @@ Current release assets are maintained in-place for the two platform builds:
 
 ## Roadmap
 
-- Threshold presets when switching units
 - Optional tiny sparkline / history action
 - Alert/snooze action
 - Caregiver mode / multiple profiles

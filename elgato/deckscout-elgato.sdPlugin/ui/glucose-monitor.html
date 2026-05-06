@@ -46,6 +46,13 @@
         background: #111;
         color: #fff;
       }
+      input[type="color"] {
+        padding: 4px;
+        height: 42px;
+        background: #111;
+        border-radius: 10px;
+        cursor: pointer;
+      }
       .row {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -150,21 +157,40 @@
         </div>
         <div>
           <label>Display mode</label>
-          <select id="compactMode">
-            <option value="false">Detailed</option>
-            <option value="true">Compact</option>
+          <select id="displayMode">
+            <option value="detailed">Detailed</option>
+            <option value="compact">Compact</option>
+            <option value="custom">Custom</option>
           </select>
         </div>
       </div>
 
       <label class="check"><input id="showDelta" type="checkbox" checked /> Show delta on the key</label>
       <label class="check"><input id="showTimestamp" type="checkbox" checked /> Show timestamp on the key</label>
+      <label class="check"><input id="compactMode" type="checkbox" /> Use compact layout</label>
+
+      <div class="card">
+        <p class="subtitle">State colors</p>
+        <div class="row">
+          <div><label>In range</label><input id="okColor" type="color" value="#166534" /></div>
+          <div><label>Low</label><input id="lowColor" type="color" value="#991b1b" /></div>
+        </div>
+        <div class="row">
+          <div><label>High</label><input id="highColor" type="color" value="#92400e" /></div>
+          <div><label>Stale</label><input id="staleColor" type="color" value="#4b5563" /></div>
+        </div>
+        <div class="row">
+          <div><label>No data</label><input id="nodataColor" type="color" value="#1d4ed8" /></div>
+          <div><label>Error</label><input id="errorColor" type="color" value="#9f1239" /></div>
+        </div>
+        <div><label>Setup</label><input id="setupColor" type="color" value="#1e3a8a" /></div>
+      </div>
 
       <button id="save">Save Settings</button>
       <div class="status" id="status"></div>
 
       <div class="hint">
-        Tip: if you switch to mmol/L, also adjust low/high thresholds to mmol equivalents.
+        Tip: switching to mmol/L auto-converts the low/high thresholds, but double-check your target ranges.
         Example: 80/180 mg/dL ≈ 4.4/10.0 mmol/L.
       </div>
     </div>
@@ -175,7 +201,7 @@
       let actionUUID;
       let lastUnit = 'mgdl';
 
-      const fields = ['baseUrl', 'lowThreshold', 'highThreshold', 'staleMinutes', 'pollSeconds', 'showDelta', 'showTimestamp', 'unit', 'compactMode'];
+      const fields = ['baseUrl', 'lowThreshold', 'highThreshold', 'staleMinutes', 'pollSeconds', 'showDelta', 'showTimestamp', 'unit', 'compactMode', 'displayMode', 'okColor', 'lowColor', 'highColor', 'staleColor', 'nodataColor', 'errorColor', 'setupColor'];
 
       function showStatus(msg, ok) {
         const el = document.getElementById('status');
@@ -227,12 +253,11 @@
           if (!el) continue;
           if (el.type === 'checkbox') {
             el.checked = Boolean(settings[field] ?? el.checked);
-          } else if (field === 'compactMode') {
-            el.value = String(settings[field] ?? 'false');
           } else if (settings[field] !== undefined) {
             el.value = settings[field];
           }
         }
+        applyDisplayMode(document.getElementById('displayMode').value || 'detailed', false);
         lastUnit = document.getElementById('unit').value || 'mgdl';
       }
 
@@ -246,8 +271,34 @@
           showDelta: document.getElementById('showDelta').checked,
           showTimestamp: document.getElementById('showTimestamp').checked,
           unit: document.getElementById('unit').value,
-          compactMode: document.getElementById('compactMode').value === 'true',
+          compactMode: document.getElementById('compactMode').checked,
+          displayMode: document.getElementById('displayMode').value,
+          okColor: document.getElementById('okColor').value,
+          lowColor: document.getElementById('lowColor').value,
+          highColor: document.getElementById('highColor').value,
+          staleColor: document.getElementById('staleColor').value,
+          nodataColor: document.getElementById('nodataColor').value,
+          errorColor: document.getElementById('errorColor').value,
+          setupColor: document.getElementById('setupColor').value,
         };
+      }
+
+      function applyDisplayMode(mode, markCustom = true) {
+        const showDelta = document.getElementById('showDelta');
+        const showTimestamp = document.getElementById('showTimestamp');
+        const compactMode = document.getElementById('compactMode');
+
+        if (mode === 'detailed') {
+          showDelta.checked = true;
+          showTimestamp.checked = true;
+          compactMode.checked = false;
+        } else if (mode === 'compact') {
+          showDelta.checked = false;
+          showTimestamp.checked = false;
+          compactMode.checked = true;
+        } else if (markCustom) {
+          document.getElementById('displayMode').value = 'custom';
+        }
       }
 
       function convertThresholds(fromUnit, toUnit) {
@@ -265,6 +316,16 @@
           highEl.value = String(Math.round(high * 18));
         }
       }
+
+      document.getElementById('displayMode').addEventListener('change', (e) => {
+        applyDisplayMode(e.target.value, false);
+      });
+
+      ['showDelta', 'showTimestamp', 'compactMode'].forEach((id) => {
+        document.getElementById(id).addEventListener('change', () => {
+          applyDisplayMode('custom');
+        });
+      });
 
       document.getElementById('unit').addEventListener('change', (e) => {
         const nextUnit = e.target.value;

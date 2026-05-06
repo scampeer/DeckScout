@@ -45,7 +45,7 @@ The key will start displaying your glucose within a few seconds.
 | Display mode | Detailed | Detailed shows arrow + delta + age; Compact is more minimal |
 | Show delta | on | Show the change from the previous reading |
 
-> **Tip:** if you switch to mmol/L, also adjust low/high thresholds. 80/180 mg/dL ≈ 4.4/10.0 mmol/L.
+> **Tip:** switching to mmol/L auto-converts the low/high thresholds, but you should still confirm your target ranges. 80/180 mg/dL ≈ 4.4/10.0 mmol/L.
 
 ## Troubleshooting
 
