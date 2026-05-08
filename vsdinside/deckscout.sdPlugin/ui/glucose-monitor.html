@@ -4,134 +4,35 @@
     <meta charset="utf-8" />
     <title>DeckScout</title>
     <style>
-      :root {
-        color-scheme: dark;
-      }
-      body {
-        font-family: Inter, system-ui, sans-serif;
-        margin: 0;
-        padding: 16px;
-        color: #e8eaed;
-        background: #171717;
-      }
-      .card {
-        background: #202124;
-        border: 1px solid #34373c;
-        border-radius: 14px;
-        padding: 14px;
-        margin-bottom: 14px;
-      }
-      .title {
-        font-size: 18px;
-        font-weight: 700;
-        margin: 0 0 4px;
-      }
-      .subtitle {
-        color: #a7adb5;
-        font-size: 12px;
-        margin: 0;
-      }
-      label {
-        display: block;
-        margin: 12px 0 6px;
-        font-size: 12px;
-        color: #c9cdd3;
-      }
-      input, select {
-        width: 100%;
-        box-sizing: border-box;
-        padding: 9px 10px;
-        border-radius: 8px;
-        border: 1px solid #444;
-        background: #111;
-        color: #fff;
-      }
-      input[type="color"] {
-        padding: 4px;
-        height: 42px;
-        background: #111;
-        border-radius: 10px;
-        cursor: pointer;
-      }
-      .row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-      }
-      .check {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-top: 12px;
-        font-size: 13px;
-      }
-      .check input {
-        width: auto;
-      }
-      .section {
-        overflow: hidden;
-      }
-      .section-toggle {
-        width: calc(100% + 28px);
-        margin: -14px -14px 0;
-        padding: 14px;
-        border: 0;
-        border-radius: 14px 14px 0 0;
-        background: transparent;
-        color: inherit;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        cursor: pointer;
-        text-align: left;
-      }
-      .section-toggle:hover {
-        background: rgba(255,255,255,0.03);
-      }
-      .section-toggle .title-wrap {
-        min-width: 0;
-      }
-      .section-toggle .chevron {
-        font-size: 16px;
-        color: #a7adb5;
-        margin-left: 10px;
-      }
-      .section-content {
-        padding-top: 12px;
-      }
-      .section.collapsed .section-content {
-        display: none;
-      }
-      .section.collapsed .section-toggle {
-        border-radius: 14px;
-      }
-      button {
-        width: 100%;
-        margin-top: 14px;
-        padding: 11px 12px;
-        border: 0;
-        border-radius: 10px;
-        background: linear-gradient(135deg, #2563eb, #3b82f6);
-        color: white;
-        font-weight: 700;
-        cursor: pointer;
-      }
-      .hint {
-        color: #9aa0a6;
-        font-size: 11px;
-        margin-top: 10px;
-        line-height: 1.45;
-      }
-      .pill {
-        display: inline-block;
-        padding: 3px 8px;
-        border-radius: 999px;
-        background: #0f2c1b;
-        color: #86efac;
-        font-size: 11px;
-        font-weight: 700;
-        margin-top: 8px;
-      }
+      :root { color-scheme: dark; }
+      body { font-family: Inter, system-ui, sans-serif; margin: 0; padding: 16px; color: #e8eaed; background: #171717; }
+      .card { background: #202124; border: 1px solid #34373c; border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+      .title { font-size: 18px; font-weight: 700; margin: 0 0 4px; }
+      .subtitle { color: #a7adb5; font-size: 12px; margin: 0; }
+      label { display: block; margin: 12px 0 6px; font-size: 12px; color: #c9cdd3; }
+      input, select { width: 100%; box-sizing: border-box; padding: 9px 10px; border-radius: 8px; border: 1px solid #444; background: #111; color: #fff; }
+      input[type="color"] { padding: 4px; height: 42px; background: #111; border-radius: 10px; cursor: pointer; }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .check { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; }
+      .check input { width: auto; }
+      .section { overflow: hidden; }
+      .section-toggle { width: calc(100% + 28px); margin: -14px -14px 0; padding: 14px; border: 0; border-radius: 14px 14px 0 0; background: transparent; color: inherit; display: flex; align-items: center; justify-content: space-between; cursor: pointer; text-align: left; }
+      .section-toggle:hover { background: rgba(255,255,255,0.03); }
+      .section-toggle .title-wrap { min-width: 0; }
+      .section-toggle .chevron { font-size: 16px; color: #a7adb5; margin-left: 10px; }
+      .section-content { padding-top: 12px; }
+      .section.collapsed .section-content { display: none; }
+      .section.collapsed .section-toggle { border-radius: 14px; }
+      button { width: 100%; margin-top: 14px; padding: 11px 12px; border: 0; border-radius: 10px; background: linear-gradient(135deg, #2563eb, #3b82f6); color: white; font-weight: 700; cursor: pointer; }
+      .button-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .secondary-btn { background: linear-gradient(135deg, #374151, #4b5563); }
+      .hint { color: #9aa0a6; font-size: 11px; margin-top: 10px; line-height: 1.45; }
+      .pill { display: inline-block; padding: 3px 8px; border-radius: 999px; background: #0f2c1b; color: #86efac; font-size: 11px; font-weight: 700; margin-top: 8px; }
+      .status { margin-top: 12px; font-size: 12px; padding: 10px 12px; border-radius: 10px; border: 1px solid #34373c; background: #111; color: #d1d5db; }
+      .status.ok { border-color: #166534; color: #bbf7d0; }
+      .status.err { border-color: #7f1d1d; color: #fecaca; }
+      .status.busy { border-color: #1d4ed8; color: #bfdbfe; }
+      [hidden] { display: none !important; }
     </style>
   </head>
   <body>
@@ -139,16 +40,34 @@
       <button class="section-toggle" type="button" data-target="about">
         <span class="title-wrap">
           <p class="title">DeckScout</p>
-          <p class="subtitle">Nightscout glucose monitor for Stream Deck / VSDinside</p>
+          <p class="subtitle">Glucose monitor for Stream Deck / VSDinside</p>
         </span>
         <span class="chevron">▾</span>
       </button>
       <div class="section-content">
-        <div class="pill">Dexcom-friendly 305s polling</div>
+        <div class="pill">Nightscout + Dexcom Share prototype</div>
       </div>
     </div>
 
-    <div class="card section" data-section="nightscout">
+    <div class="card section" data-section="source">
+      <button class="section-toggle" type="button" data-target="source">
+        <span class="title-wrap">
+          <p class="title">Data source</p>
+          <p class="subtitle">Choose where readings come from</p>
+        </span>
+        <span class="chevron">▾</span>
+      </button>
+      <div class="section-content">
+        <label>Source</label>
+        <select id="sourceType">
+          <option value="nightscout">Nightscout</option>
+          <option value="dexcomShare">Dexcom Share</option>
+        </select>
+        <div class="hint">Nightscout stays the stable path. Dexcom Share is a direct-source prototype.</div>
+      </div>
+    </div>
+
+    <div class="card section source-panel" data-source-panel="nightscout" data-section="nightscout">
       <button class="section-toggle" type="button" data-target="nightscout">
         <span class="title-wrap">
           <p class="title">Nightscout</p>
@@ -160,6 +79,37 @@
         <label>Nightscout base URL</label>
         <input id="baseUrl" placeholder="https://nas.tail17fc34.ts.net" />
         <div class="hint">Local-first: point this at your LAN, Tailscale, or other self-hosted Nightscout URL.</div>
+      </div>
+    </div>
+
+    <div class="card section source-panel" data-source-panel="dexcomShare" data-section="dexcom">
+      <button class="section-toggle" type="button" data-target="dexcom">
+        <span class="title-wrap">
+          <p class="title">Dexcom Share</p>
+          <p class="subtitle">Direct Dexcom Share credentials</p>
+        </span>
+        <span class="chevron">▾</span>
+      </button>
+      <div class="section-content">
+        <div class="row">
+          <div>
+            <label>Region</label>
+            <select id="dexcomRegion">
+              <option value="us">US</option>
+              <option value="ous">Outside US</option>
+              <option value="jp">Japan</option>
+            </select>
+          </div>
+          <div>
+            <label>Account ID (optional)</label>
+            <input id="dexcomAccountId" placeholder="UUID if you already know it" />
+          </div>
+        </div>
+        <label>Dexcom username / email / phone</label>
+        <input id="dexcomUsername" placeholder="you@example.com or +15551234567" />
+        <label>Dexcom password</label>
+        <input id="dexcomPassword" type="password" placeholder="Dexcom Share password" />
+        <div class="hint">Use the publisher account credentials, not the follower account. Dexcom Share also requires at least one follower to be set up on the Dexcom side. Password is never re-populated into the inspector after save.</div>
       </div>
     </div>
 
@@ -241,11 +191,12 @@
           </div>
         </div>
 
-        <button id="save">Save Settings</button>
-        <div class="hint">
-          Tip: switching to mmol/L auto-converts the low/high thresholds, but double-check your target ranges.
-          Example: 80/180 mg/dL ≈ 4.4/10.0 mmol/L.
+        <div class="button-row">
+          <button id="save">Save Settings</button>
+          <button id="verify" class="secondary-btn" type="button">Verify</button>
         </div>
+        <div id="verifyStatus" class="status" hidden>Ready.</div>
+        <div class="hint">Tip: switching to mmol/L auto-converts the low/high thresholds, but double-check your target ranges.</div>
       </div>
     </div>
 
@@ -255,16 +206,14 @@
       let actionContext;
       let actionInfo;
       let lastUnit = 'mgdl';
-      const sectionDefaults = { about: false, nightscout: false, settings: false, colors: true };
-
-      const fields = ['baseUrl', 'lowThreshold', 'highThreshold', 'staleMinutes', 'pollSeconds', 'showDelta', 'showTimestamp', 'unit', 'compactMode', 'displayMode', 'okColor', 'lowColor', 'highColor', 'staleColor', 'nodataColor', 'errorColor', 'setupColor'];
+      const sectionDefaults = { about: false, source: false, nightscout: false, dexcom: true, settings: false, colors: true };
+      const fields = ['sourceType', 'baseUrl', 'dexcomUsername', 'dexcomPassword', 'dexcomAccountId', 'dexcomRegion', 'lowThreshold', 'highThreshold', 'staleMinutes', 'pollSeconds', 'showDelta', 'showTimestamp', 'unit', 'compactMode', 'displayMode', 'okColor', 'lowColor', 'highColor', 'staleColor', 'nodataColor', 'errorColor', 'setupColor'];
 
       function connectElgatoStreamDeckSocket(inPort, inUUID, inRegisterEvent, inInfo, inActionInfo) {
         uuid = inUUID;
         actionInfo = JSON.parse(inActionInfo || '{}');
         actionContext = actionInfo.context;
         websocket = new WebSocket(`ws://127.0.0.1:${inPort}`);
-
         websocket.onopen = function () {
           websocket.send(JSON.stringify({ event: inRegisterEvent, uuid }));
           hydrate(actionInfo.payload?.settings || {});
@@ -275,19 +224,26 @@
         for (const field of fields) {
           const el = document.getElementById(field);
           if (!el) continue;
-          if (el.type === 'checkbox') {
-            el.checked = Boolean(settings[field] ?? el.checked);
-          } else if (settings[field] !== undefined) {
-            el.value = settings[field];
+          if (field === 'dexcomPassword') {
+            el.value = '';
+            continue;
           }
+          if (el.type === 'checkbox') el.checked = Boolean(settings[field] ?? el.checked);
+          else if (settings[field] !== undefined) el.value = settings[field];
         }
         applyDisplayMode(document.getElementById('displayMode').value || 'detailed', false);
         lastUnit = document.getElementById('unit').value || 'mgdl';
+        applySourceVisibility();
       }
 
       function payload() {
         return {
+          sourceType: document.getElementById('sourceType').value,
           baseUrl: document.getElementById('baseUrl').value.trim(),
+          dexcomUsername: document.getElementById('dexcomUsername').value.trim(),
+          dexcomPassword: document.getElementById('dexcomPassword').value,
+          dexcomAccountId: document.getElementById('dexcomAccountId').value.trim(),
+          dexcomRegion: document.getElementById('dexcomRegion').value,
           lowThreshold: Number(document.getElementById('lowThreshold').value || 80),
           highThreshold: Number(document.getElementById('highThreshold').value || 180),
           staleMinutes: Number(document.getElementById('staleMinutes').value || 15),
@@ -305,6 +261,97 @@
           errorColor: document.getElementById('errorColor').value,
           setupColor: document.getElementById('setupColor').value,
         };
+      }
+
+      function setVerifyStatus(message, kind) {
+        const el = document.getElementById('verifyStatus');
+        el.hidden = false;
+        el.textContent = message;
+        el.className = `status ${kind || ''}`.trim();
+      }
+
+      async function fetchJsonWithTimeout(url, init) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        try {
+          const response = await fetch(url, { ...(init || {}), signal: controller.signal });
+          const text = await response.text();
+          let data = null;
+          try { data = text ? JSON.parse(text) : null; } catch {}
+          return { response, data, text };
+        } finally {
+          clearTimeout(timeout);
+        }
+      }
+
+      function dexcomConfig(settings) {
+        const region = settings.dexcomRegion || 'us';
+        const baseUrls = {
+          us: 'https://share2.dexcom.com/ShareWebServices/Services/',
+          ous: 'https://shareous1.dexcom.com/ShareWebServices/Services/',
+          jp: 'https://share.dexcom.jp/ShareWebServices/Services/',
+        };
+        const appIds = {
+          us: 'd89443d2-327c-4a6f-89e5-496bbb0317db',
+          ous: 'd89443d2-327c-4a6f-89e5-496bbb0317db',
+          jp: 'd8665ade-9673-4e27-9ff6-92db4ce13d13',
+        };
+        return { baseUrl: baseUrls[region], applicationId: appIds[region] };
+      }
+
+      async function verifyNightscout(settings) {
+        if (!settings.baseUrl) throw new Error('Nightscout URL missing');
+        const base = settings.baseUrl.replace(/\/$/, '');
+        const url = `${base}/api/v1/entries.json?count=1`;
+        const { response, data } = await fetchJsonWithTimeout(url);
+        if (!response.ok) throw new Error(`Nightscout returned ${response.status}`);
+        if (!Array.isArray(data) || !data.length || data[0].sgv == null) throw new Error('No Nightscout reading found');
+        return `Nightscout OK — ${data[0].sgv}${settings.unit === 'mmol' ? ' mg/dL raw' : ' mg/dL'} latest reading loaded.`;
+      }
+
+      async function verifyDexcom(settings) {
+        if (!settings.dexcomPassword || (!settings.dexcomUsername && !settings.dexcomAccountId)) {
+          throw new Error('Dexcom credentials incomplete');
+        }
+        const { baseUrl, applicationId } = dexcomConfig(settings);
+        let accountId = settings.dexcomAccountId;
+        if (!accountId) {
+          const auth = await fetchJsonWithTimeout(`${baseUrl}General/AuthenticatePublisherAccount`, {
+            method: 'POST',
+            headers: { 'Accept-Encoding': 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accountName: settings.dexcomUsername, password: settings.dexcomPassword, applicationId }),
+          });
+          if (!auth.response.ok) throw new Error(auth.data?.Message || auth.data?.Code || 'Dexcom authentication failed');
+          accountId = auth.data;
+        }
+        const login = await fetchJsonWithTimeout(`${baseUrl}General/LoginPublisherAccountById`, {
+          method: 'POST',
+          headers: { 'Accept-Encoding': 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accountId, password: settings.dexcomPassword, applicationId }),
+        });
+        if (!login.response.ok) throw new Error(login.data?.Message || login.data?.Code || 'Dexcom login failed');
+        const sessionId = login.data;
+        const url = new URL(`${baseUrl}Publisher/ReadPublisherLatestGlucoseValues`);
+        url.searchParams.set('sessionId', sessionId);
+        url.searchParams.set('minutes', '10');
+        url.searchParams.set('maxCount', '1');
+        const readings = await fetchJsonWithTimeout(url.toString(), { method: 'POST', headers: { 'Accept-Encoding': 'application/json' } });
+        if (!readings.response.ok) throw new Error(readings.data?.Message || readings.data?.Code || 'Dexcom reading fetch failed');
+        if (!Array.isArray(readings.data) || !readings.data.length || readings.data[0].Value == null) throw new Error('No Dexcom reading found');
+        return `Dexcom Share OK — ${readings.data[0].Value} mg/dL latest reading loaded.`;
+      }
+
+      async function verifyCurrentSettings() {
+        const settings = payload();
+        setVerifyStatus('Verifying…', 'busy');
+        try {
+          const message = settings.sourceType === 'dexcomShare'
+            ? await verifyDexcom(settings)
+            : await verifyNightscout(settings);
+          setVerifyStatus(message, 'ok');
+        } catch (error) {
+          setVerifyStatus(error?.message || 'Verification failed', 'err');
+        }
       }
 
       function setSectionCollapsed(name, collapsed) {
@@ -325,7 +372,6 @@
         const showDelta = document.getElementById('showDelta');
         const showTimestamp = document.getElementById('showTimestamp');
         const compactMode = document.getElementById('compactMode');
-
         if (mode === 'detailed') {
           showDelta.checked = true;
           showTimestamp.checked = true;
@@ -345,7 +391,6 @@
         const highEl = document.getElementById('highThreshold');
         const low = Number(lowEl.value || 0);
         const high = Number(highEl.value || 0);
-
         if (fromUnit === 'mgdl' && toUnit === 'mmol') {
           lowEl.value = (low / 18).toFixed(1);
           highEl.value = (high / 18).toFixed(1);
@@ -355,16 +400,18 @@
         }
       }
 
-      document.getElementById('displayMode').addEventListener('change', (e) => {
-        applyDisplayMode(e.target.value, false);
-      });
-
-      ['showDelta', 'showTimestamp', 'compactMode'].forEach((id) => {
-        document.getElementById(id).addEventListener('change', () => {
-          applyDisplayMode('custom');
+      function applySourceVisibility() {
+        const source = document.getElementById('sourceType').value;
+        document.querySelectorAll('[data-source-panel]').forEach((panel) => {
+          panel.hidden = panel.getAttribute('data-source-panel') !== source;
         });
-      });
+      }
 
+      document.getElementById('sourceType').addEventListener('change', applySourceVisibility);
+      document.getElementById('displayMode').addEventListener('change', (e) => applyDisplayMode(e.target.value, false));
+      ['showDelta', 'showTimestamp', 'compactMode'].forEach((id) => {
+        document.getElementById(id).addEventListener('change', () => applyDisplayMode('custom'));
+      });
       document.getElementById('unit').addEventListener('change', (e) => {
         const nextUnit = e.target.value;
         convertThresholds(lastUnit, nextUnit);
@@ -372,28 +419,20 @@
       });
 
       document.getElementById('save').addEventListener('click', () => {
-        if (!websocket || websocket.readyState !== 1) {
-          return;
-        }
+        if (!websocket || websocket.readyState !== 1) return;
         const settings = payload();
-        websocket.send(JSON.stringify({
-          event: 'setSettings',
-          context: actionContext || uuid,
-          payload: settings,
-        }));
-        websocket.send(JSON.stringify({
-          action: actionInfo.action,
-          event: 'sendToPlugin',
-          context: uuid,
-          payload: settings,
-        }));
+        websocket.send(JSON.stringify({ event: 'setSettings', context: actionContext || uuid, payload: settings }));
+        websocket.send(JSON.stringify({ action: actionInfo.action, event: 'sendToPlugin', context: uuid, payload: settings }));
+      });
+
+      document.getElementById('verify').addEventListener('click', () => {
+        void verifyCurrentSettings();
       });
 
       window.addEventListener('DOMContentLoaded', () => {
-        document.querySelectorAll('.section-toggle').forEach((btn) => {
-          btn.addEventListener('click', () => toggleSection(btn.dataset.target));
-        });
+        document.querySelectorAll('.section-toggle').forEach((btn) => btn.addEventListener('click', () => toggleSection(btn.dataset.target)));
         Object.entries(sectionDefaults).forEach(([name, collapsed]) => setSectionCollapsed(name, collapsed));
+        applySourceVisibility();
       });
     </script>
   </body>

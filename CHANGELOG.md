@@ -2,6 +2,22 @@
 
 All notable changes to DeckScout are tracked here.
 
+## [0.3.13-vsdinside] — 2026-05-08
+
+### Added (VSDinside)
+- Direct **Dexcom Share** source mode alongside the existing Nightscout workflow
+- Source selector in the VSDinside inspector (`Nightscout` / `Dexcom Share`)
+- Dexcom Share settings fields for region, username, password, and optional account ID
+- Inspector-side **Verify** button to test the active source without relying only on key state
+- Source label on-key so the current provider is visible at a glance (`NIGHTSCOUT` / `DEXCOM`)
+
+### Improved (VSDinside)
+- Clearer Dexcom-specific error states and retry guidance
+- Safer inspector behavior: Dexcom passwords are not re-populated back into the settings UI after save
+- Updated VSDinside documentation to reflect multi-source support
+
+---
+
 ## [1.0.0-elgato] — 2026-05-05
 
 ### Added

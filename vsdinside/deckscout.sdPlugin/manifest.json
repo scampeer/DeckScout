@@ -1,9 +1,9 @@
 {
   "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
   "Name": "DeckScout",
-  "Version": "0.3.12",
+  "Version": "0.3.13",
   "Author": "Shadow",
-  "Description": "A local-first Stream Deck glucose monitor for Nightscout.",
+  "Description": "A local-first Stream Deck glucose monitor for Nightscout and Dexcom Share.",
   "SDKVersion": 1,
   "Nodejs": {
     "Version": "20"
@@ -32,8 +32,11 @@
       "Name": "DeckScout",
       "UUID": "ai.openclaw.deckscout.monitor",
       "Icon": "imgs/action-icon.svg",
-      "Tooltip": "Show the latest Nightscout glucose reading.",
-      "Controllers": ["Keypad", "Information"],
+      "Tooltip": "Show the latest glucose reading from Nightscout or Dexcom Share.",
+      "Controllers": [
+        "Keypad",
+        "Information"
+      ],
       "DisableAutomaticStates": true,
       "States": [
         {

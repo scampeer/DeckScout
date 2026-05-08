@@ -4,11 +4,10 @@
 
 <h1 align="center">DeckScout</h1>
 
-
-A local-first Stream Deck Nightscout glucose monitor.
+A local-first Stream Deck glucose monitor.
 Available for both **Elgato Stream Deck** and **VSDinside / Stream Dock**.
 
-DeckScout shows your latest Nightscout glucose reading directly on a key — value, trend arrow, optional delta, and optional timestamp — color-coded for in-range, low, high, stale, and error states. It renders a dynamic SVG card instead of plain text and points at your own self-hosted Nightscout URL. No cloud accounts, no third-party telemetry.
+DeckScout shows your latest glucose reading directly on a key — value, trend arrow, optional delta, and optional timestamp — color-coded for in-range, low, high, stale, and error states. It renders a dynamic SVG card instead of plain text and can read from either your own **Nightscout** instance or **Dexcom Share** directly in the VSDinside build.
 
 > ⚠️ **Not medical advice.** Do not use DeckScout for treatment decisions.
 
@@ -17,11 +16,12 @@ DeckScout shows your latest Nightscout glucose reading directly on a key — val
 | Platform | Folder | Release asset |
 |---|---|---|
 | 🟦 **Elgato Stream Deck** | [`elgato/`](./elgato) | `DeckScout-1.0.8-elgato.zip` |
-| 🟪 **VSDinside / Stream Dock** | [`vsdinside/`](./vsdinside) | `DeckScout-0.3.12-vsdinside.zip` |
+| 🟪 **VSDinside / Stream Dock** | [`vsdinside/`](./vsdinside) | `DeckScout-0.3.13-vsdinside.zip` |
 
 ## What DeckScout does
 
-- Polls Nightscout with adaptive timing
+- Polls glucose sources with adaptive timing
+- Supports **Nightscout** and **Dexcom Share** in the VSDinside build
 - Renders a dynamic, color-coded key card instead of plain text
 - Shows the latest glucose value, trend arrow, optional delta, and optional timestamp
 - Marks low / high / stale / no-data / error / setup states visually
@@ -41,11 +41,38 @@ DeckScout shows your latest Nightscout glucose reading directly on a key — val
 - 🌹 **rose** — fetch error
 - 🔵 **blue** — setup needed
 
+## Data sources
+
+### Nightscout
+DeckScout supports a traditional self-hosted Nightscout workflow.
+
+You need:
+- a working Nightscout instance
+- recent glucose entries already flowing into it
+- a URL reachable from the machine running DeckScout
+
+DeckScout reads standard Nightscout fields such as:
+- `sgv`
+- `direction`
+- `date` / `dateString`
+
+### Dexcom Share
+The VSDinside build also supports direct **Dexcom Share** access.
+
+You need:
+- Dexcom Share enabled in the Dexcom mobile app
+- at least one follower configured in Dexcom Share
+- your **publisher account** credentials, not the follower credentials
+- the correct region selected:
+  - `us`
+  - `ous`
+  - `jp`
+
+This direct mode removes the Nightscout requirement for Dexcom users who want a simpler setup.
+
 ## General setup guide
 
-### 1) Get Nightscout running
-
-DeckScout expects a working Nightscout instance that exposes recent glucose entries.
+### 1) Nightscout option: get Nightscout running
 
 Common ways to run Nightscout:
 - Docker on a NAS, mini PC, Raspberry Pi, or VPS
@@ -95,24 +122,13 @@ And confirm the API returns entries:
 http://YOUR-HOST:1337/api/v1/entries.json?count=2
 ```
 
-DeckScout reads these Nightscout fields:
-- `sgv`
-- `direction`
-- `date` or `dateString`
-
 ### 2) Feed glucose data into Nightscout
-
-DeckScout does **not** talk directly to Dexcom. It reads whatever Nightscout already has.
 
 Typical upload paths:
 - Dexcom Share-compatible uploader
 - xDrip / xDrip4iOS / Zukka / similar uploader
+- Libre-compatible uploaders that write normal Nightscout entries
 - any Nightscout-compatible source that writes entries normally
-
-For iPhone users, a practical pattern is:
-- Dexcom G7 app on iPhone
-- uploader app that can send to Nightscout
-- Nightscout reachable via LAN or HTTPS/Tailscale
 
 ### 3) Make Nightscout reachable from your deck software
 
@@ -128,14 +144,17 @@ If the plugin cannot reach Nightscout, it will show an error state.
 
 ### VSDinside / Stream Dock
 
-1. Download `DeckScout-0.3.12-vsdinside.zip` from the [Releases page](https://github.com/scampeer/DeckScout/releases)
-2. In VSDinside, import the plugin zip
+1. Download a VSDinside release from the [Releases page](https://github.com/scampeer/DeckScout/releases)
+2. In VSDinside, import the plugin package
 3. Find **Health → Glucose Monitor**
 4. Drag it onto a key
 5. Open the settings panel
-6. Enter your Nightscout base URL
-7. Choose units / thresholds / display options
+6. Choose a source:
+   - **Nightscout**
+   - **Dexcom Share**
+7. Fill in the required settings for that source
 8. Save settings
+9. Press the key once to force a refresh
 
 Recommended starting values:
 - Poll every: `305`
@@ -171,13 +190,14 @@ Example: `80/180 mg/dL ≈ 4.4/10.0 mmol/L`.
 See the [Releases page](https://github.com/scampeer/DeckScout/releases).
 
 Current release assets:
-- `DeckScout-0.3.12-vsdinside.zip`
+- `DeckScout-0.3.13-vsdinside.zip`
 - `DeckScout-1.0.8-elgato.zip`
 
 ## Notes
 
 - Dexcom-style sources commonly update every ~5 minutes, so `305` seconds remains the default slow poll interval.
-- DeckScout may temporarily poll faster while catching up or waiting for a fresh Nightscout entry.
+- DeckScout may temporarily poll faster while catching up or waiting for a fresh entry.
+- The VSDinside Dexcom Share path is working, but should still be treated as a convenience feature rather than a medical-grade integration.
 - If using mmol/L, DeckScout auto-converts thresholds when you switch units, but you should still confirm your target ranges.
 - This is not medical advice and should not be used for treatment decisions.
 
@@ -193,7 +213,7 @@ Current release assets:
 - Optional tiny sparkline / history action
 - Alert/snooze action
 - Caregiver mode / multiple profiles
-- Direct Dexcom mode if it becomes worth the complexity
+- LibreLinkUp-style direct source exploration
 
 ## Changelog
 

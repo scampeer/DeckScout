@@ -102,8 +102,15 @@ async function refresh(context: string, manual = false): Promise<void> {
   const settings = state.settings;
 
   try {
-    if (!settings.baseUrl) {
+    if (settings.sourceType === 'nightscout' && !settings.baseUrl) {
       const display: Display = { state: 'setup', value: 'Setup', line2: 'Nightscout', footer: 'URL needed', divider: true };
+      await renderState(context, settings, display);
+      syncCadence(context, display.state, null, false);
+      return;
+    }
+
+    if (settings.sourceType === 'dexcomShare' && !settings.dexcomPassword) {
+      const display: Display = { state: 'setup', value: 'Setup', line2: 'Dexcom', footer: 'Creds needed', divider: true };
       await renderState(context, settings, display);
       syncCadence(context, display.state, null, false);
       return;
@@ -120,7 +127,13 @@ async function refresh(context: string, manual = false): Promise<void> {
     if (manual) showOk(context);
   } catch (error) {
     console.error('DeckScout refresh failed', error);
-    await renderState(context, settings, { state: 'error', value: 'Err', line2: 'Fetch fail', footer: 'Check URL', divider: true });
+    const message = error instanceof Error ? error.message : 'Fetch failed';
+    const isDexcom = settings.sourceType === 'dexcomShare';
+    const footer = isDexcom
+      ? message.includes('rate-limited') ? 'Wait + retry' : message.includes('login') ? 'Check creds' : message.includes('session') ? 'Retry login' : 'Check Share'
+      : 'Check URL';
+    const line2 = isDexcom ? 'Dexcom fail' : 'Fetch fail';
+    await renderState(context, settings, { state: 'error', value: 'Err', line2, footer, divider: true, sourceLabel: isDexcom ? 'DEXCOM' : 'NIGHTSCOUT' });
     syncCadence(context, 'error', null, false);
   } finally {
     const latest = actions.get(context);
