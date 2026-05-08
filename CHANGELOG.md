@@ -2,6 +2,21 @@
 
 All notable changes to DeckScout are tracked here.
 
+## [1.0.8.8-elgato] — 2026-05-08
+
+### Added (Elgato)
+- Direct **Dexcom Share** source mode alongside the existing Nightscout workflow
+- Source selector in the Elgato property inspector (`Nightscout` / `Dexcom Share`)
+- Dexcom Share settings fields for region, username, password, and optional account ID
+
+### Fixed (Elgato)
+- Settings now save correctly in the Elgato property inspector for both Nightscout and Dexcom Share
+- Dexcom passwords are preserved across later saves unless explicitly replaced
+- Key rendering now updates correctly using a base64 SVG data URI, restoring live on-key display
+- Dexcom Share runtime now authenticates, opens a session, and fetches current readings in the Elgato build
+
+---
+
 ## [0.3.13-vsdinside] — 2026-05-08
 
 ### Added (VSDinside)

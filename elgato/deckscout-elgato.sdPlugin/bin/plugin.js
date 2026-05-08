@@ -9108,7 +9108,12 @@ typeof SuppressedError === "function" ? SuppressedError : function (error, suppr
 };
 
 const DEFAULTS = {
+    sourceType: 'nightscout',
     baseUrl: '',
+    dexcomUsername: '',
+    dexcomPassword: '',
+    dexcomAccountId: '',
+    dexcomRegion: 'us',
     lowThreshold: 80,
     highThreshold: 180,
     staleMinutes: 15,
@@ -9128,7 +9133,7 @@ const DEFAULTS = {
 };
 const DIRECTION_MAP = {
     DoubleUp: '↑', SingleUp: '↑', FortyFiveUp: '↗', Flat: '→', FortyFiveDown: '↘', SingleDown: '↓', DoubleDown: '↓',
-    NONE: '??', NOT_COMPUTABLE: '??', RATE_OUT_OF_RANGE: '??',
+    NONE: '??', NOT_COMPUTABLE: '??', RATE_OUT_OF_RANGE: '??', None: '??', NotComputable: '??', RateOutOfRange: '??',
 };
 const STATE_COLORS = {
     ok: { bg: '#166534', accent: '#86efac', text: '#f0fdf4', subtext: '#dcfce7' },
@@ -9139,10 +9144,22 @@ const STATE_COLORS = {
     error: { bg: '#9f1239', accent: '#fda4af', text: '#fff1f2', subtext: '#ffe4e6' },
     setup: { bg: '#1e3a8a', accent: '#93c5fd', text: '#eff6ff', subtext: '#dbeafe' },
 };
+const DEXCOM_BASE_URLS = {
+    us: 'https://share2.dexcom.com/ShareWebServices/Services/',
+    ous: 'https://shareous1.dexcom.com/ShareWebServices/Services/',
+    jp: 'https://share.dexcom.jp/ShareWebServices/Services/',
+};
+const DEXCOM_APPLICATION_IDS = {
+    us: 'd89443d2-327c-4a6f-89e5-496bbb0317db',
+    ous: 'd89443d2-327c-4a6f-89e5-496bbb0317db',
+    jp: 'd8665ade-9673-4e27-9ff6-92db4ce13d13',
+};
 function withDefaults(settings) {
     const merged = {
         ...DEFAULTS,
         ...settings,
+        sourceType: settings?.sourceType === 'dexcomShare' ? 'dexcomShare' : 'nightscout',
+        dexcomRegion: settings?.dexcomRegion === 'ous' || settings?.dexcomRegion === 'jp' ? settings.dexcomRegion : 'us',
         lowThreshold: Number(settings?.lowThreshold ?? DEFAULTS.lowThreshold),
         highThreshold: Number(settings?.highThreshold ?? DEFAULTS.highThreshold),
         staleMinutes: Number(settings?.staleMinutes ?? DEFAULTS.staleMinutes),
@@ -9166,33 +9183,149 @@ function withDefaults(settings) {
     return merged;
 }
 async function fetchEntries(settings) {
+    return settings.sourceType === 'dexcomShare' ? fetchDexcomEntries(settings) : fetchNightscoutEntries(settings);
+}
+async function fetchNightscoutEntries(settings) {
     const base = settings.baseUrl.replace(/\/$/, '');
     const url = new URL(`${base}/api/v1/entries.json`);
     url.searchParams.set('count', '2');
+    const response = await fetchWithTimeout(url.toString());
+    if (!response.ok)
+        throw new Error(`Nightscout returned ${response.status}`);
+    return (await response.json());
+}
+async function fetchDexcomEntries(settings) {
+    if (!settings.dexcomPassword || (!settings.dexcomUsername && !settings.dexcomAccountId)) {
+        throw new Error('Dexcom Share credentials incomplete');
+    }
+    const baseUrl = DEXCOM_BASE_URLS[settings.dexcomRegion];
+    const applicationId = DEXCOM_APPLICATION_IDS[settings.dexcomRegion];
+    let accountId = settings.dexcomAccountId.trim();
+    const getSessionId = async () => {
+        if (!accountId) {
+            const auth = await dexcomPost(`${baseUrl}General/AuthenticatePublisherAccount`, {
+                accountName: settings.dexcomUsername.trim(),
+                password: settings.dexcomPassword,
+                applicationId,
+            });
+            if (typeof auth !== 'string' || !auth || auth === '00000000-0000-0000-0000-000000000000') {
+                throw new Error('Dexcom login failed');
+            }
+            accountId = auth;
+        }
+        const session = await dexcomPost(`${baseUrl}General/LoginPublisherAccountById`, {
+            accountId,
+            password: settings.dexcomPassword,
+            applicationId,
+        });
+        if (typeof session !== 'string' || !session || session === '00000000-0000-0000-0000-000000000000') {
+            throw new Error('Dexcom session login failed');
+        }
+        return session;
+    };
+    let sessionId = await getSessionId();
+    const read = async () => dexcomPost(`${baseUrl}Publisher/ReadPublisherLatestGlucoseValues`, undefined, {
+        sessionId,
+        minutes: 10,
+        maxCount: 1,
+    });
+    let parsed;
+    try {
+        parsed = await read();
+    }
+    catch (error) {
+        if (error instanceof Error && /session expired|SessionIdNotFound|SessionNotValid/i.test(error.message)) {
+            sessionId = await getSessionId();
+            parsed = await read();
+        }
+        else {
+            throw error;
+        }
+    }
+    if (!Array.isArray(parsed))
+        throw new Error('Dexcom readings response malformed');
+    return parsed.map((reading) => ({
+        sgv: typeof reading?.Value === 'number' ? reading.Value : undefined,
+        direction: reading?.Trend,
+        date: parseDexcomDate(reading?.WT) ?? parseDexcomDate(reading?.ST) ?? parseDexcomDate(reading?.DT) ?? undefined,
+        dateString: typeof reading?.DT === 'string' ? reading.DT : undefined,
+    }));
+}
+async function dexcomPost(url, body, params) {
+    const finalUrl = new URL(url);
+    if (params) {
+        for (const [key, value] of Object.entries(params))
+            finalUrl.searchParams.set(key, String(value));
+    }
+    const response = await fetchWithTimeout(finalUrl.toString(), {
+        method: 'POST',
+        headers: { 'Accept-Encoding': 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify(body ?? {}),
+    });
+    return parseDexcomJson(response);
+}
+async function parseDexcomJson(response) {
+    const text = await response.text();
+    let parsed;
+    try {
+        parsed = text ? JSON.parse(text) : null;
+    }
+    catch {
+        throw new Error('Dexcom returned invalid JSON');
+    }
+    if (!response.ok) {
+        const message = parsed?.Message || parsed?.Code || `Dexcom returned ${response.status}`;
+        throw new Error(normalizeDexcomError(String(message)));
+    }
+    return parsed;
+}
+async function fetchWithTimeout(url, init) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
     try {
-        const response = await fetch(url, { signal: controller.signal });
-        if (!response.ok)
-            throw new Error(`Nightscout returned ${response.status}`);
-        return (await response.json());
+        return await fetch(url, { ...init, signal: controller.signal });
     }
     catch (error) {
-        if (error instanceof Error && error.name === 'AbortError') {
-            throw new Error('Nightscout request timed out');
-        }
+        if (error instanceof Error && error.name === 'AbortError')
+            throw new Error('Request timed out');
         throw error;
     }
     finally {
         clearTimeout(timeout);
     }
 }
+function parseDexcomDate(raw) {
+    if (typeof raw === 'number' && Number.isFinite(raw))
+        return raw;
+    if (typeof raw !== 'string')
+        return null;
+    const match = /Date\((\d+)/.exec(raw);
+    if (match)
+        return Number(match[1]);
+    const parsed = Date.parse(raw);
+    return Number.isNaN(parsed) ? null : parsed;
+}
+function normalizeDexcomError(message) {
+    const m = message.toLowerCase();
+    if (m.includes('accountpasswordinvalid') || m.includes('cannot authenticate'))
+        return 'Dexcom login failed';
+    if (m.includes('sessionnotvalid') || m.includes('sessionidnotfound'))
+        return 'Dexcom session expired';
+    if (m.includes('sso_authenticatemaxattemptsexceeded') || m.includes('maxattempts'))
+        return 'Dexcom login rate-limited';
+    if (m.includes('invalidargument') && m.includes('accountname'))
+        return 'Dexcom username invalid';
+    if (m.includes('invalidargument') && m.includes('password'))
+        return 'Dexcom password invalid';
+    if (m.includes('invalidargument') && m.includes('uuid'))
+        return 'Dexcom account ID invalid';
+    return message.startsWith('Dexcom') ? message : `Dexcom: ${message}`;
+}
 function buildDisplay(settings, entries) {
     const latest = entries[0];
     const previous = entries[1];
-    if (latest?.sgv == null) {
+    if (latest?.sgv == null)
         return { state: 'nodata', value: '--', line2: 'No data', footer: 'Waiting', divider: true };
-    }
     const ageMinutes = ageMinutesFor(latest);
     const stale = ageMinutes >= settings.staleMinutes;
     const trend = DIRECTION_MAP[latest.direction ?? ''] ?? '??';
@@ -9202,13 +9335,7 @@ function buildDisplay(settings, entries) {
     const renderedDelta = delta == null ? '' : formatDelta(delta, settings.unit);
     const footer = stale ? `STALE ${ageMinutes}m` : `${ageMinutes}m ago`;
     const trendOnly = !settings.showDelta;
-    const line2 = settings.compactMode
-        ? renderedDelta
-            ? `${trend} ${renderedDelta}`
-            : trend
-        : renderedDelta
-            ? `${trend} ${renderedDelta}`
-            : trend;
+    const line2 = renderedDelta ? `${trend} ${renderedDelta}` : trend;
     return { state: displayState, value, line2, footer, divider: !settings.compactMode, trendOnly, hideFooter: !settings.showTimestamp };
 }
 function buildSvg(display, settings) {
@@ -9224,13 +9351,7 @@ function buildSvg(display, settings) {
 }
 function getPalette(settings, state) {
     const base = STATE_COLORS[state];
-    const bg = getStateBg(settings, state) || base.bg;
-    return {
-        bg,
-        accent: base.accent,
-        text: base.text,
-        subtext: base.subtext,
-    };
+    return { bg: getStateBg(settings, state) || base.bg, accent: base.accent, text: base.text, subtext: base.subtext };
 }
 function getStateBg(settings, state) {
     switch (state) {
@@ -9253,10 +9374,8 @@ function formatValue(sgv, unit) {
     return unit === 'mmol' ? (sgv / 18).toFixed(1) : String(Math.round(sgv));
 }
 function formatDelta(delta, unit) {
-    if (unit === 'mmol') {
-        const mmol = delta / 18;
-        return `${mmol >= 0 ? '+' : ''}${mmol.toFixed(1)}`;
-    }
+    if (unit === 'mmol')
+        return `${delta / 18 >= 0 ? '+' : ''}${(delta / 18).toFixed(1)}`;
     return `${delta >= 0 ? '+' : ''}${Math.round(delta)}`;
 }
 function escapeXml(value) {
@@ -9316,8 +9435,13 @@ let GlucoseMonitorAction = (() => {
             if (!state)
                 return;
             const settings = state.settings;
-            if (!settings.baseUrl) {
+            if (settings.sourceType === 'nightscout' && !settings.baseUrl) {
                 await this.renderState(action, settings, { state: 'setup', value: 'Setup', line2: 'Nightscout', footer: 'URL needed', divider: true });
+                this.schedule(action);
+                return;
+            }
+            if (settings.sourceType === 'dexcomShare' && (!settings.dexcomPassword || (!settings.dexcomUsername && !settings.dexcomAccountId))) {
+                await this.renderState(action, settings, { state: 'setup', value: 'Setup', line2: 'Dexcom', footer: 'Login needed', divider: true });
                 this.schedule(action);
                 return;
             }
@@ -9330,13 +9454,23 @@ let GlucoseMonitorAction = (() => {
             }
             catch (error) {
                 console.error('DeckScout Elgato refresh failed', error);
-                await this.renderState(action, settings, { state: 'error', value: 'Err', line2: 'Fetch fail', footer: 'Check URL', divider: true });
+                const raw = error instanceof Error ? error.message : String(error);
+                const short = raw.replace(/^Dexcom:\s*/i, '').slice(0, 18);
+                await this.renderState(action, settings, {
+                    state: 'error',
+                    value: 'Err',
+                    line2: settings.sourceType === 'dexcomShare' ? short || 'Dexcom fail' : 'Fetch fail',
+                    footer: settings.sourceType === 'dexcomShare' ? 'See key text' : 'Check URL',
+                    divider: true,
+                });
             }
             this.schedule(action);
         }
         async renderState(action, settings, display) {
             await action.setTitle('');
-            await action.setImage(buildSvg(display, settings));
+            const svg = buildSvg(display, settings);
+            const b64 = Buffer.from(svg).toString('base64');
+            await action.setImage(`data:image/svg+xml;base64,${b64}`);
         }
         schedule(action) {
             const state = this.states.get(action.id);

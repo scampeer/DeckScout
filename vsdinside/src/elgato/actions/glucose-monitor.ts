@@ -46,8 +46,14 @@ export class GlucoseMonitorAction extends SingletonAction<PluginSettings> {
     if (!state) return;
     const settings = state.settings;
 
-    if (!settings.baseUrl) {
+    if (settings.sourceType === 'nightscout' && !settings.baseUrl) {
       await this.renderState(action, settings, { state: 'setup', value: 'Setup', line2: 'Nightscout', footer: 'URL needed', divider: true });
+      this.schedule(action);
+      return;
+    }
+
+    if (settings.sourceType === 'dexcomShare' && (!settings.dexcomPassword || (!settings.dexcomUsername && !settings.dexcomAccountId))) {
+      await this.renderState(action, settings, { state: 'setup', value: 'Setup', line2: 'Dexcom', footer: 'Login needed', divider: true });
       this.schedule(action);
       return;
     }
@@ -59,7 +65,15 @@ export class GlucoseMonitorAction extends SingletonAction<PluginSettings> {
       if (manual) await action.showOk();
     } catch (error) {
       console.error('DeckScout Elgato refresh failed', error);
-      await this.renderState(action, settings, { state: 'error', value: 'Err', line2: 'Fetch fail', footer: 'Check URL', divider: true });
+      const raw = error instanceof Error ? error.message : String(error);
+      const short = raw.replace(/^Dexcom:\s*/i, '').slice(0, 18);
+      await this.renderState(action, settings, {
+        state: 'error',
+        value: 'Err',
+        line2: settings.sourceType === 'dexcomShare' ? short || 'Dexcom fail' : 'Fetch fail',
+        footer: settings.sourceType === 'dexcomShare' ? 'See key text' : 'Check URL',
+        divider: true,
+      });
     }
 
     this.schedule(action);
@@ -67,7 +81,9 @@ export class GlucoseMonitorAction extends SingletonAction<PluginSettings> {
 
   private async renderState(action: KeyAction<PluginSettings>, settings: Required<PluginSettings>, display: Display): Promise<void> {
     await action.setTitle('');
-    await action.setImage(buildSvg(display, settings));
+    const svg = buildSvg(display, settings);
+    const b64 = Buffer.from(svg).toString('base64');
+    await action.setImage(`data:image/svg+xml;base64,${b64}`);
   }
 
   private schedule(action: KeyAction<PluginSettings>): void {

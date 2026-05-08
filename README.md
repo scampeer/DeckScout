@@ -7,7 +7,7 @@
 A local-first Stream Deck glucose monitor.
 Available for both **Elgato Stream Deck** and **VSDinside / Stream Dock**.
 
-DeckScout shows your latest glucose reading directly on a key — value, trend arrow, optional delta, and optional timestamp — color-coded for in-range, low, high, stale, and error states. It renders a dynamic SVG card instead of plain text and can read from either your own **Nightscout** instance or **Dexcom Share** directly in the VSDinside build.
+DeckScout shows your latest glucose reading directly on a key — value, trend arrow, optional delta, and optional timestamp — color-coded for in-range, low, high, stale, and error states. It renders a dynamic SVG card instead of plain text and can read from either your own **Nightscout** instance or **Dexcom Share** directly in both builds.
 
 > ⚠️ **Not medical advice.** Do not use DeckScout for treatment decisions.
 
@@ -15,13 +15,13 @@ DeckScout shows your latest glucose reading directly on a key — value, trend a
 
 | Platform | Folder | Release asset |
 |---|---|---|
-| 🟦 **Elgato Stream Deck** | [`elgato/`](./elgato) | `DeckScout-1.0.8-elgato.zip` |
+| 🟦 **Elgato Stream Deck** | [`elgato/`](./elgato) | `DeckScout-1.0.8.8-elgato.streamDeckPlugin` |
 | 🟪 **VSDinside / Stream Dock** | [`vsdinside/`](./vsdinside) | `DeckScout-0.3.13-vsdinside.zip` |
 
 ## What DeckScout does
 
 - Polls glucose sources with adaptive timing
-- Supports **Nightscout** and **Dexcom Share** in the VSDinside build
+- Supports **Nightscout** and **Dexcom Share** in both the Elgato and VSDinside builds
 - Renders a dynamic, color-coded key card instead of plain text
 - Shows the latest glucose value, trend arrow, optional delta, and optional timestamp
 - Marks low / high / stale / no-data / error / setup states visually
@@ -57,7 +57,7 @@ DeckScout reads standard Nightscout fields such as:
 - `date` / `dateString`
 
 ### Dexcom Share
-The VSDinside build also supports direct **Dexcom Share** access.
+Both builds support direct **Dexcom Share** access.
 
 You need:
 - Dexcom Share enabled in the Dexcom mobile app
@@ -164,15 +164,15 @@ Recommended starting values:
 
 ### Elgato Stream Deck
 
-1. Download `DeckScout-1.0.8-elgato.zip` from the [Releases page](https://github.com/scampeer/DeckScout/releases)
+1. Download `DeckScout-1.0.8.8-elgato.streamDeckPlugin` from the [Releases page](https://github.com/scampeer/DeckScout/releases)
 2. Fully quit the Stream Deck app
-3. Extract into the Stream Deck plugins folder:
+3. Open the `.streamDeckPlugin` file to install it, or extract it manually into the Stream Deck plugins folder:
    - **Windows:** `%appdata%\Elgato\StreamDeck\Plugins\`
    - **macOS:** `~/Library/Application Support/com.elgato.StreamDeck/Plugins/`
-4. Start Stream Deck again
+4. Start Stream Deck again if it does not relaunch automatically
 5. Find **DeckScout → Glucose Monitor**
 6. Drag it onto a key
-7. Enter your Nightscout base URL and save
+7. Choose **Nightscout** or **Dexcom Share**, enter credentials/settings, and save
 
 ## Recommended plugin settings
 
@@ -191,7 +191,7 @@ See the [Releases page](https://github.com/scampeer/DeckScout/releases).
 
 Current release assets:
 - `DeckScout-0.3.13-vsdinside.zip`
-- `DeckScout-1.0.8-elgato.zip`
+- `DeckScout-1.0.8.8-elgato.streamDeckPlugin`
 
 ## Notes
 

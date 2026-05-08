@@ -10,37 +10,51 @@ If you're using the **Elgato Stream Deck app** with Elgato hardware (Stream Deck
 
 ## Requirements
 
-- Stream Deck app **6.4 or newer** (tested on 7.0.3)
+- Stream Deck app **6.4 or newer** (verified working on 7.4.1)
 - Windows 10+ or macOS 12+
-- A reachable [Nightscout](http://www.nightscout.info/) instance
+- One supported glucose source:
+  - a reachable [Nightscout](http://www.nightscout.info/) instance
+  - or direct **Dexcom Share** credentials
 
 ## Install
 
-1. Download `DeckScout-1.0.8-elgato.zip` from the [Releases](https://github.com/scampeer/DeckScout/releases) page
-2. **Fully quit** the Stream Deck app (system tray → Quit, not just close window)
-3. Extract the zip into:
+1. Download `DeckScout-1.0.8.8-elgato.streamDeckPlugin` from the [Releases](https://github.com/scampeer/DeckScout/releases) page
+2. Open the `.streamDeckPlugin` file to install it, or **fully quit** the Stream Deck app (system tray → Quit, not just close window) and extract it manually into:
    - **Windows:** `%appdata%\Elgato\StreamDeck\Plugins\`
    - **macOS:** `~/Library/Application Support/com.elgato.StreamDeck/Plugins/`
-4. Start Stream Deck — DeckScout will appear in the action list on the right
+3. Start Stream Deck if it does not relaunch automatically — DeckScout will appear in the action list on the right
 
 ## Setup
 
 1. In the Stream Deck app, find **DeckScout → Glucose Monitor** in the right-hand action list
 2. Drag it onto a key
 3. Click the key to open the property inspector
-4. Enter your **Nightscout base URL**, e.g.:
+4. Choose your source:
+   - **Nightscout**
+   - **Dexcom Share**
+5. If using Nightscout, enter your base URL, e.g.:
    - LAN: `http://192.168.1.42:1337`
    - Tailscale HTTPS: `https://nas.tail17fc34.ts.net`
-5. Adjust thresholds, units, display layout, and state colors to taste
-6. Click **Save Settings**
+6. If using Dexcom Share, enter:
+   - region
+   - username / email / phone
+   - password
+   - optional account ID
+7. Adjust thresholds, units, display layout, and state colors to taste
+8. Click **Save Settings**
 
-The key will start displaying your glucose within a few seconds.
+The key will start displaying your glucose within a few seconds. Dexcom Share uses the same publisher credentials you use in the Dexcom mobile app and requires Share to have at least one follower enabled.
 
 ## Configuration
 
 | Setting | Default | Description |
 |---|---|---|
+| Source | Nightscout | Choose Nightscout or Dexcom Share |
 | Nightscout base URL | *(empty)* | Your Nightscout site URL — no trailing slash needed |
+| Dexcom region | us | `us`, `ous`, or `jp` for Dexcom Share |
+| Dexcom username | *(empty)* | Dexcom publisher username / email / phone |
+| Dexcom password | *(empty)* | Dexcom publisher password |
+| Dexcom account ID | *(empty)* | Optional advanced path if you already know the UUID |
 | Units | mg/dL | mg/dL or mmol/L |
 | Poll every | 305s | Polling interval. 305s recommended for Dexcom upstreams |
 | Low threshold | 80 | Below this value, the key turns red |
@@ -55,11 +69,13 @@ The key will start displaying your glucose within a few seconds.
 ## Troubleshooting
 
 **The key shows "Setup / URL needed"**
-Open the property inspector, enter your Nightscout URL, and hit Save Settings.
+Open the property inspector, choose **Nightscout**, enter your Nightscout URL, and hit Save Settings.
 
 **The key shows "Err / Fetch fail"**
 The plugin couldn't reach Nightscout. Verify the URL works in your browser, check that the Stream Deck host can reach it (firewall, VPN, Tailscale, etc.), and confirm Nightscout's `/api/v1/entries.json` endpoint is reachable.
 
+**The key shows "Setup / Login needed" or "Err / Dexcom fail"**
+Check your Dexcom Share region and publisher credentials. Dexcom Share requires a follower relationship to exist on the Dexcom side, and phone-number usernames must include country code (for example `+11234567890`).
 **The key shows "STALE"**
 Nightscout returned data, but the most recent reading is older than your "Stale after" threshold. This usually means an upstream collector (xDrip, Dexcom Share bridge, etc.) has stopped uploading.
 
@@ -81,9 +97,10 @@ Plugin runtime logs are written to:
 - Single bundled `plugin.js` — no external `node_modules` shipped
 - Uses Stream Deck's bundled Node 20 runtime (no system Node required)
 - Renders a per-frame inline SVG and pushes it to the key as a base64 data URI
+- Dexcom Share runtime follows a pydexcom-style auth/session/read flow adapted for Elgato
 
 ## Privacy
 
-DeckScout makes HTTP/HTTPS requests **only** to the Nightscout URL you configure. It does not phone home, does not collect telemetry, and stores all settings locally in your Stream Deck profile. The URL never leaves your machine.
+DeckScout makes HTTP/HTTPS requests **only** to the Nightscout URL or Dexcom Share endpoint you configure. It does not phone home, does not collect telemetry, and stores all settings locally in your Stream Deck profile.
 
 For maximum privacy, point the plugin at a Nightscout instance on your LAN, a Tailscale tailnet, or another private network.
