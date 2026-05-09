@@ -30,6 +30,8 @@ Dexcom Share requires:
 - the correct region (`us`, `ous`, or `jp`)
 
 > **Important:** if Dexcom Share has no follower configured, the plugin may not work properly.
+>
+> If Dexcom Share is having upstream service or protocol issues, the app may also temporarily stop working in Dexcom mode until Dexcom Share recovers.
 
 ## Install (end users)
 

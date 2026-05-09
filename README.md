@@ -71,6 +71,8 @@ You need:
 This direct mode removes the Nightscout requirement for Dexcom users who want a simpler setup.
 
 > **Important:** if Dexcom Share has no follower configured, the Dexcom integration may fail even when the username, password, and region are correct.
+>
+> **Also important:** if Dexcom Share itself is having service or protocol issues upstream, the Dexcom mode in DeckScout may temporarily stop working until Dexcom Share recovers.
 
 ## General setup guide
 
@@ -200,6 +202,8 @@ Current release assets:
 - Dexcom-style sources commonly update every ~5 minutes, so `305` seconds remains the default slow poll interval.
 - DeckScout may temporarily poll faster while catching up or waiting for a fresh entry.
 - The VSDinside Dexcom Share path is working, but should still be treated as a convenience feature rather than a medical-grade integration.
+- If Dexcom Share has an upstream outage or protocol/API issue, the Dexcom mode may temporarily stop working.
+- A future improvement would be to add a dedicated Dexcom Share health/protocol check and surface a clearer in-app outage notice when Dexcom itself is the problem.
 - If using mmol/L, DeckScout auto-converts thresholds when you switch units, but you should still confirm your target ranges.
 - This is not medical advice and should not be used for treatment decisions.
 

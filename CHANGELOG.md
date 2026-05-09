@@ -30,6 +30,7 @@ All notable changes to DeckScout are tracked here.
 - Clearer Dexcom-specific error states and retry guidance
 - Safer inspector behavior: Dexcom passwords are not re-populated back into the settings UI after save
 - Updated VSDinside documentation to reflect multi-source support
+- Documented Dexcom Share caveats: at least one follower is required, and upstream Dexcom Share issues can temporarily break Dexcom mode
 
 ---
 
