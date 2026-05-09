@@ -1,15 +1,28 @@
 import { action, KeyDownEvent, SingletonAction, type DidReceiveSettingsEvent, type KeyAction, type SendToPluginEvent, type WillAppearEvent, type WillDisappearEvent } from '@elgato/streamdeck';
 import { buildDisplay, buildSvg, fetchEntries, type Display, type PluginSettings, withDefaults } from '../../common';
 
+function sourceTypeForAction(actionUUID: string): PluginSettings['sourceType'] | undefined {
+  const lower = actionUUID.toLowerCase();
+  if (lower.includes('dexcom')) return 'dexcomShare';
+  if (lower.includes('nightscout')) return 'nightscout';
+  return undefined;
+}
+
+function applyActionDefaults(settings: PluginSettings | undefined, actionUUID: string): Required<PluginSettings> {
+  const forcedSourceType = sourceTypeForAction(actionUUID);
+  return withDefaults(forcedSourceType ? { ...(settings ?? {}), sourceType: forcedSourceType } : settings);
+}
+
 type ActionState = { settings: Required<PluginSettings>; timer?: ReturnType<typeof setTimeout> };
 
-@action({ UUID: 'ai.openclaw.deckscout.elgato.monitor' })
+@action({ UUID: 'ai.openclaw.deckscout.elgato.nightscout' })
+@action({ UUID: 'ai.openclaw.deckscout.elgato.dexcom' })
 export class GlucoseMonitorAction extends SingletonAction<PluginSettings> {
   private readonly states = new Map<string, ActionState>();
 
   override async onWillAppear(ev: WillAppearEvent<PluginSettings>): Promise<void> {
     if (!ev.action.isKey()) return;
-    const settings = withDefaults(ev.payload.settings);
+    const settings = applyActionDefaults(ev.payload.settings, ev.action.manifestId);
     this.states.set(ev.action.id, { settings });
     await this.refresh(ev.action);
   }
@@ -17,7 +30,7 @@ export class GlucoseMonitorAction extends SingletonAction<PluginSettings> {
   override async onDidReceiveSettings(ev: DidReceiveSettingsEvent<PluginSettings>): Promise<void> {
     if (!ev.action.isKey()) return;
     const current = this.states.get(ev.action.id);
-    const settings = withDefaults(ev.payload.settings ?? current?.settings);
+    const settings = applyActionDefaults(ev.payload.settings ?? current?.settings, ev.action.manifestId);
     this.states.set(ev.action.id, { ...(current ?? { settings }), settings });
     await this.refresh(ev.action);
   }
@@ -25,7 +38,7 @@ export class GlucoseMonitorAction extends SingletonAction<PluginSettings> {
   override async onSendToPlugin(ev: SendToPluginEvent<PluginSettings, PluginSettings>): Promise<void> {
     if (!ev.action.isKey()) return;
     const current = this.states.get(ev.action.id);
-    const settings = withDefaults({ ...(current?.settings ?? {}), ...(ev.payload ?? {}) });
+    const settings = applyActionDefaults({ ...(current?.settings ?? {}), ...(ev.payload ?? {}) }, ev.action.manifestId);
     this.states.set(ev.action.id, { ...(current ?? { settings }), settings });
     await this.refresh(ev.action);
   }

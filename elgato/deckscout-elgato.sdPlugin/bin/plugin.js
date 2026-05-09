@@ -9382,8 +9382,20 @@ function escapeXml(value) {
     return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&apos;');
 }
 
+function sourceTypeForAction(actionUUID) {
+    const lower = actionUUID.toLowerCase();
+    if (lower.includes('dexcom'))
+        return 'dexcomShare';
+    if (lower.includes('nightscout'))
+        return 'nightscout';
+    return undefined;
+}
+function applyActionDefaults(settings, actionUUID) {
+    const forcedSourceType = sourceTypeForAction(actionUUID);
+    return withDefaults(forcedSourceType ? { ...(settings ?? {}), sourceType: forcedSourceType } : settings);
+}
 let GlucoseMonitorAction = (() => {
-    let _classDecorators = [action({ UUID: 'ai.openclaw.deckscout.elgato.monitor' })];
+    let _classDecorators = [action({ UUID: 'ai.openclaw.deckscout.elgato.nightscout' }), action({ UUID: 'ai.openclaw.deckscout.elgato.dexcom' })];
     let _classDescriptor;
     let _classExtraInitializers = [];
     let _classThis;
@@ -9401,7 +9413,7 @@ let GlucoseMonitorAction = (() => {
         async onWillAppear(ev) {
             if (!ev.action.isKey())
                 return;
-            const settings = withDefaults(ev.payload.settings);
+            const settings = applyActionDefaults(ev.payload.settings, ev.action.manifestId);
             this.states.set(ev.action.id, { settings });
             await this.refresh(ev.action);
         }
@@ -9409,7 +9421,7 @@ let GlucoseMonitorAction = (() => {
             if (!ev.action.isKey())
                 return;
             const current = this.states.get(ev.action.id);
-            const settings = withDefaults(ev.payload.settings ?? current?.settings);
+            const settings = applyActionDefaults(ev.payload.settings ?? current?.settings, ev.action.manifestId);
             this.states.set(ev.action.id, { ...(current ?? { settings }), settings });
             await this.refresh(ev.action);
         }
@@ -9417,7 +9429,7 @@ let GlucoseMonitorAction = (() => {
             if (!ev.action.isKey())
                 return;
             const current = this.states.get(ev.action.id);
-            const settings = withDefaults({ ...(current?.settings ?? {}), ...(ev.payload ?? {}) });
+            const settings = applyActionDefaults({ ...(current?.settings ?? {}), ...(ev.payload ?? {}) }, ev.action.manifestId);
             this.states.set(ev.action.id, { ...(current ?? { settings }), settings });
             await this.refresh(ev.action);
         }
@@ -9489,6 +9501,14 @@ let GlucoseMonitorAction = (() => {
     return _classThis;
 })();
 
-streamDeck.actions.registerAction(new GlucoseMonitorAction());
+const legacyMonitorInstance = new GlucoseMonitorAction();
+legacyMonitorInstance.manifestId = 'ai.openclaw.deckscout.elgato.monitor';
+streamDeck.actions.registerAction(legacyMonitorInstance);
+const nightscoutInstance = new GlucoseMonitorAction();
+nightscoutInstance.manifestId = 'ai.openclaw.deckscout.elgato.nightscout';
+streamDeck.actions.registerAction(nightscoutInstance);
+const dexcomInstance = new GlucoseMonitorAction();
+dexcomInstance.manifestId = 'ai.openclaw.deckscout.elgato.dexcom';
+streamDeck.actions.registerAction(dexcomInstance);
 void streamDeck.connect();
 //# sourceMappingURL=plugin.js.map

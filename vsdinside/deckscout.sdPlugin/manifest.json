@@ -29,15 +29,58 @@
   "UUID": "ai.openclaw.deckscout",
   "Actions": [
     {
-      "Name": "DeckScout",
-      "UUID": "ai.openclaw.deckscout.monitor",
+      "Name": "Nightscout",
+      "UUID": "ai.openclaw.deckscout.nightscout",
       "Icon": "imgs/action-icon.svg",
-      "Tooltip": "Show the latest glucose reading from Nightscout or Dexcom Share.",
+      "Tooltip": "Show the latest glucose reading from Nightscout.",
       "Controllers": [
         "Keypad",
         "Information"
       ],
       "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Image": "imgs/action-icon.svg",
+          "TitleAlignment": "middle",
+          "FontSize": "16"
+        }
+      ],
+      "UserTitleEnabled": true,
+      "SupportedInMultiActions": true,
+      "PropertyInspectorPath": "ui/glucose-monitor.html"
+    },
+    {
+      "Name": "Dexcom",
+      "UUID": "ai.openclaw.deckscout.dexcom",
+      "Icon": "imgs/action-icon.svg",
+      "Tooltip": "Show the latest glucose reading from Dexcom Share.",
+      "Controllers": [
+        "Keypad",
+        "Information"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Image": "imgs/action-icon.svg",
+          "TitleAlignment": "middle",
+          "FontSize": "16"
+        }
+      ],
+      "UserTitleEnabled": true,
+      "SupportedInMultiActions": true,
+      "PropertyInspectorPath": "ui/glucose-monitor.html"
+    },
+    {
+      "Name": "DeckScout",
+      "UUID": "ai.openclaw.deckscout.monitor",
+      "Icon": "imgs/action-icon.svg",
+      "Tooltip": "Legacy combined DeckScout monitor action.",
+      "Controllers": [
+        "Keypad",
+        "Information"
+      ],
+      "DisableAutomaticStates": true,
+      "VisibleInActionsList": false,
       "States": [
         {
           "Image": "imgs/action-icon.svg",

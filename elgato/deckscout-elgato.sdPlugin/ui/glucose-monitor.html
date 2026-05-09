@@ -24,77 +24,445 @@
       .section.collapsed .section-content { display: none; }
       .section.collapsed .section-toggle { border-radius: 14px; }
       button { width: 100%; margin-top: 14px; padding: 11px 12px; border: 0; border-radius: 10px; background: linear-gradient(135deg, #2563eb, #3b82f6); color: white; font-weight: 700; cursor: pointer; }
+      .button-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .secondary-btn { background: linear-gradient(135deg, #374151, #4b5563); }
       .hint { color: #9aa0a6; font-size: 11px; margin-top: 10px; line-height: 1.45; }
       .pill { display: inline-block; padding: 3px 8px; border-radius: 999px; background: #0f2c1b; color: #86efac; font-size: 11px; font-weight: 700; margin-top: 8px; }
+      .status { margin-top: 12px; font-size: 12px; padding: 10px 12px; border-radius: 10px; border: 1px solid #34373c; background: #111; color: #d1d5db; }
+      .status.ok { border-color: #166534; color: #bbf7d0; }
+      .status.err { border-color: #7f1d1d; color: #fecaca; }
+      .status.busy { border-color: #1d4ed8; color: #bfdbfe; }
+      [hidden] { display: none !important; }
     </style>
   </head>
   <body>
-    <div class="card section" data-section="about"><button class="section-toggle" type="button" data-target="about"><span class="title-wrap"><p class="title">DeckScout</p><p class="subtitle">Glucose monitor for Stream Deck</p></span><span class="chevron">▾</span></button><div class="section-content"><div class="pill">Dexcom Share layer 1</div></div></div>
-    <div class="card section" data-section="source"><button class="section-toggle" type="button" data-target="source"><span class="title-wrap"><p class="title">Data source</p><p class="subtitle">Choose where readings come from</p></span><span class="chevron">▾</span></button><div class="section-content"><label>Source</label><select id="sourceType"><option value="nightscout">Nightscout</option><option value="dexcomShare">Dexcom Share</option></select></div></div>
-    <div class="card section source-panel" data-source-panel="nightscout" data-section="nightscout"><button class="section-toggle" type="button" data-target="nightscout"><span class="title-wrap"><p class="title">Nightscout</p><p class="subtitle">Connection and base URL</p></span><span class="chevron">▾</span></button><div class="section-content"><label>Nightscout base URL</label><input id="baseUrl" placeholder="https://nightscout.example.com" /><div class="hint">Local-first: point this at your LAN, Tailscale, or other self-hosted Nightscout URL.</div></div></div>
-    <div class="card section source-panel" data-source-panel="dexcomShare" data-section="dexcom"><button class="section-toggle" type="button" data-target="dexcom"><span class="title-wrap"><p class="title">Dexcom Share</p><p class="subtitle">Direct Dexcom Share credentials</p></span><span class="chevron">▾</span></button><div class="section-content"><div class="row"><div><label>Region</label><select id="dexcomRegion"><option value="us">US</option><option value="ous">Outside US</option><option value="jp">Japan</option></select></div><div><label>Account ID (optional)</label><input id="dexcomAccountId" placeholder="UUID if you already know it" /></div></div><label>Dexcom username / email / phone</label><input id="dexcomUsername" placeholder="you@example.com or +15551234567" /><label>Dexcom password</label><input id="dexcomPassword" type="password" placeholder="Dexcom Share password" /><div class="hint">Use the publisher account credentials used in the Dexcom app. The Share service must have at least one follower enabled.</div></div></div>
-    <div class="card section" data-section="settings"><button class="section-toggle" type="button" data-target="settings"><span class="title-wrap"><p class="title">Settings</p><p class="subtitle">Units, thresholds, layout, and timing</p></span><span class="chevron">▾</span></button><div class="section-content"><div class="row"><div><label>Units</label><select id="unit"><option value="mgdl">mg/dL</option><option value="mmol">mmol/L</option></select></div><div><label>Poll every (seconds)</label><input id="pollSeconds" type="number" value="305" min="60" /></div></div><div class="row"><div><label>Low threshold</label><input id="lowThreshold" type="number" value="80" /></div><div><label>High threshold</label><input id="highThreshold" type="number" value="180" /></div></div><div class="row"><div><label>Stale after (minutes)</label><input id="staleMinutes" type="number" value="15" min="5" /></div><div><label>Display mode</label><select id="displayMode"><option value="detailed">Detailed</option><option value="compact">Compact</option><option value="custom">Custom</option></select></div></div><label class="check"><input id="showDelta" type="checkbox" checked /> Show delta on the key</label><label class="check"><input id="showTimestamp" type="checkbox" checked /> Show timestamp on the key</label><label class="check"><input id="compactMode" type="checkbox" /> Use compact layout</label><div class="card section" data-section="colors"><button class="section-toggle" type="button" data-target="colors"><span class="title-wrap"><p class="title">State colors</p><p class="subtitle">Customize key colors for each state</p></span><span class="chevron">▾</span></button><div class="section-content"><div class="row"><div><label>In range</label><input id="okColor" type="color" value="#166534" /></div><div><label>Low</label><input id="lowColor" type="color" value="#991b1b" /></div></div><div class="row"><div><label>High</label><input id="highColor" type="color" value="#92400e" /></div><div><label>Stale</label><input id="staleColor" type="color" value="#4b5563" /></div></div><div class="row"><div><label>No data</label><input id="nodataColor" type="color" value="#1d4ed8" /></div><div><label>Error</label><input id="errorColor" type="color" value="#9f1239" /></div></div><div><label>Setup</label><input id="setupColor" type="color" value="#1e3a8a" /></div></div></div><button id="save">Save Settings</button><div class="hint">Tip: switching to mmol/L auto-converts the low/high thresholds, but double-check your target ranges.</div></div></div>
+    <div class="card section" data-section="about">
+      <button class="section-toggle" type="button" data-target="about">
+        <span class="title-wrap">
+          <p class="title">DeckScout</p>
+          <p class="subtitle">Glucose monitor for Stream Deck / VSDinside</p>
+        </span>
+        <span class="chevron">▾</span>
+      </button>
+      <div class="section-content">
+        <div class="pill">Nightscout + Dexcom Share prototype</div>
+      </div>
+    </div>
+
+    <div class="card section" data-section="source">
+      <button class="section-toggle" type="button" data-target="source">
+        <span class="title-wrap">
+          <p class="title">Data source</p>
+          <p class="subtitle">Choose where readings come from</p>
+        </span>
+        <span class="chevron">▾</span>
+      </button>
+      <div class="section-content">
+        <label>Source</label>
+        <select id="sourceType">
+          <option value="nightscout">Nightscout</option>
+          <option value="dexcomShare">Dexcom Share</option>
+        </select>
+        <div class="hint">Nightscout stays the stable path. Dexcom Share is a direct-source prototype.</div>
+      </div>
+    </div>
+
+    <div class="card section source-panel" data-source-panel="nightscout" data-section="nightscout">
+      <button class="section-toggle" type="button" data-target="nightscout">
+        <span class="title-wrap">
+          <p class="title">Nightscout</p>
+          <p class="subtitle">Connection and base URL</p>
+        </span>
+        <span class="chevron">▾</span>
+      </button>
+      <div class="section-content">
+        <label>Nightscout base URL</label>
+        <input id="baseUrl" placeholder="https://nas.tail17fc34.ts.net" />
+        <div class="hint">Local-first: point this at your LAN, Tailscale, or other self-hosted Nightscout URL.</div>
+      </div>
+    </div>
+
+    <div class="card section source-panel" data-source-panel="dexcomShare" data-section="dexcom">
+      <button class="section-toggle" type="button" data-target="dexcom">
+        <span class="title-wrap">
+          <p class="title">Dexcom Share</p>
+          <p class="subtitle">Direct Dexcom Share credentials</p>
+        </span>
+        <span class="chevron">▾</span>
+      </button>
+      <div class="section-content">
+        <div class="row">
+          <div>
+            <label>Region</label>
+            <select id="dexcomRegion">
+              <option value="us">US</option>
+              <option value="ous">Outside US</option>
+              <option value="jp">Japan</option>
+            </select>
+          </div>
+          <div>
+            <label>Account ID (optional)</label>
+            <input id="dexcomAccountId" placeholder="UUID if you already know it" />
+          </div>
+        </div>
+        <label>Dexcom username / email / phone</label>
+        <input id="dexcomUsername" placeholder="you@example.com or +15551234567" />
+        <label>Dexcom password</label>
+        <input id="dexcomPassword" type="password" placeholder="Dexcom Share password" />
+        <div class="hint">Use the publisher account credentials, not the follower account. Dexcom Share also requires at least one follower to be set up on the Dexcom side. Password is never re-populated into the inspector after save.</div>
+      </div>
+    </div>
+
+    <div class="card section" data-section="settings">
+      <button class="section-toggle" type="button" data-target="settings">
+        <span class="title-wrap">
+          <p class="title">Settings</p>
+          <p class="subtitle">Units, thresholds, layout, and timing</p>
+        </span>
+        <span class="chevron">▾</span>
+      </button>
+      <div class="section-content">
+        <div class="row">
+          <div>
+            <label>Units</label>
+            <select id="unit">
+              <option value="mgdl">mg/dL</option>
+              <option value="mmol">mmol/L</option>
+            </select>
+          </div>
+          <div>
+            <label>Poll every (seconds)</label>
+            <input id="pollSeconds" type="number" value="305" min="60" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Low threshold</label>
+            <input id="lowThreshold" type="number" value="80" />
+          </div>
+          <div>
+            <label>High threshold</label>
+            <input id="highThreshold" type="number" value="180" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Stale after (minutes)</label>
+            <input id="staleMinutes" type="number" value="15" min="5" />
+          </div>
+          <div>
+            <label>Display mode</label>
+            <select id="displayMode">
+              <option value="detailed">Detailed</option>
+              <option value="compact">Compact</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+        </div>
+
+        <label class="check"><input id="showDelta" type="checkbox" checked /> Show delta on the key</label>
+        <label class="check"><input id="showTimestamp" type="checkbox" checked /> Show timestamp on the key</label>
+        <label class="check"><input id="compactMode" type="checkbox" /> Use compact layout</label>
+
+        <div class="card section" data-section="colors">
+          <button class="section-toggle" type="button" data-target="colors">
+            <span class="title-wrap">
+              <p class="title">State colors</p>
+              <p class="subtitle">Customize key colors for each state</p>
+            </span>
+            <span class="chevron">▾</span>
+          </button>
+          <div class="section-content">
+            <div class="row">
+              <div><label>In range</label><input id="okColor" type="color" value="#166534" /></div>
+              <div><label>Low</label><input id="lowColor" type="color" value="#991b1b" /></div>
+            </div>
+            <div class="row">
+              <div><label>High</label><input id="highColor" type="color" value="#92400e" /></div>
+              <div><label>Stale</label><input id="staleColor" type="color" value="#4b5563" /></div>
+            </div>
+            <div class="row">
+              <div><label>No data</label><input id="nodataColor" type="color" value="#1d4ed8" /></div>
+              <div><label>Error</label><input id="errorColor" type="color" value="#9f1239" /></div>
+            </div>
+            <div><label>Setup</label><input id="setupColor" type="color" value="#1e3a8a" /></div>
+          </div>
+        </div>
+
+        <div class="button-row">
+          <button id="save" type="button">Save Settings</button>
+          <button id="verify" class="secondary-btn" type="button">Verify</button>
+        </div>
+        <div id="verifyStatus" class="status" hidden>Ready.</div>
+        <div class="hint">Tip: switching to mmol/L auto-converts the low/high thresholds, but double-check your target ranges.</div>
+      </div>
+    </div>
+
     <script>
-      let websocket, context, actionUUID, actionContext, lastUnit = 'mgdl';
-      let currentSettings = {};
+      let websocket;
+      let uuid;
+      let actionContext;
+      let actionInfo;
+      let lockedSourceType = null;
+      let lastUnit = 'mgdl';
       const sectionDefaults = { about: false, source: false, nightscout: false, dexcom: true, settings: false, colors: true };
-      const fields = ['sourceType','baseUrl','dexcomUsername','dexcomPassword','dexcomAccountId','dexcomRegion','lowThreshold','highThreshold','staleMinutes','pollSeconds','showDelta','showTimestamp','unit','compactMode','displayMode','okColor','lowColor','highColor','staleColor','nodataColor','errorColor','setupColor'];
+      const fields = ['sourceType', 'baseUrl', 'dexcomUsername', 'dexcomPassword', 'dexcomAccountId', 'dexcomRegion', 'lowThreshold', 'highThreshold', 'staleMinutes', 'pollSeconds', 'showDelta', 'showTimestamp', 'unit', 'compactMode', 'displayMode', 'okColor', 'lowColor', 'highColor', 'staleColor', 'nodataColor', 'errorColor', 'setupColor'];
+
+      function detectLockedSourceType(action) {
+        const lower = String(action || '').toLowerCase();
+        if (lower.includes('dexcom')) return 'dexcomShare';
+        if (lower.includes('nightscout')) return 'nightscout';
+        return null;
+      }
+
       function connectElgatoStreamDeckSocket(inPort, inUUID, inRegisterEvent, inInfo, inActionInfo) {
-        let actionInfo = {}; try { actionInfo = JSON.parse(inActionInfo || '{}'); } catch {}
-        context = inUUID; actionUUID = actionInfo.action; actionContext = actionInfo.context;
+        uuid = inUUID;
+        actionInfo = JSON.parse(inActionInfo || '{}');
+        actionContext = actionInfo.context;
+        lockedSourceType = detectLockedSourceType(actionInfo.action);
         websocket = new WebSocket(`ws://127.0.0.1:${inPort}`);
-        websocket.onopen = () => { websocket.send(JSON.stringify({ event: inRegisterEvent, uuid: inUUID })); hydrate(actionInfo.payload?.settings || {}); };
-        websocket.onmessage = (evt) => { try { const msg = JSON.parse(evt.data); if (msg.event === 'didReceiveSettings') hydrate(msg.payload?.settings || {}); } catch {} };
-      }
-      function hydrate(settings) {
-        currentSettings = { ...currentSettings, ...(settings || {}) };
-        for (const field of fields) { const el = document.getElementById(field); if (!el) continue; if (field === 'dexcomPassword') { el.value=''; continue; } if (el.type === 'checkbox') el.checked = Boolean(currentSettings[field] ?? el.checked); else if (currentSettings[field] !== undefined) el.value = currentSettings[field]; }
-        applyDisplayMode(document.getElementById('displayMode').value || 'detailed', false); lastUnit = document.getElementById('unit').value || 'mgdl'; applySourceVisibility();
-      }
-      function payload() {
-        const next = {
-          ...currentSettings,
-          sourceType: sourceType.value,
-          baseUrl: baseUrl.value.trim(),
-          dexcomUsername: dexcomUsername.value.trim(),
-          dexcomAccountId: dexcomAccountId.value.trim(),
-          dexcomRegion: dexcomRegion.value,
-          lowThreshold: Number(lowThreshold.value || 80),
-          highThreshold: Number(highThreshold.value || 180),
-          staleMinutes: Number(staleMinutes.value || 15),
-          pollSeconds: Number(pollSeconds.value || 305),
-          showDelta: showDelta.checked,
-          showTimestamp: showTimestamp.checked,
-          unit: unit.value,
-          compactMode: compactMode.checked,
-          displayMode: displayMode.value,
-          okColor: okColor.value,
-          lowColor: lowColor.value,
-          highColor: highColor.value,
-          staleColor: staleColor.value,
-          nodataColor: nodataColor.value,
-          errorColor: errorColor.value,
-          setupColor: setupColor.value
+        websocket.onopen = function () {
+          websocket.send(JSON.stringify({ event: inRegisterEvent, uuid }));
+          hydrate(actionInfo.payload?.settings || {});
         };
-        if (dexcomPassword.value) next.dexcomPassword = dexcomPassword.value;
-        currentSettings = next;
-        return next;
       }
-      function setSectionCollapsed(name, collapsed) { const section = document.querySelector(`.section[data-section="${name}"]`); if (!section) return; section.classList.toggle('collapsed', collapsed); const chev = section.querySelector('.chevron'); if (chev) chev.textContent = collapsed ? '▸' : '▾'; }
-      function toggleSection(name) { const section = document.querySelector(`.section[data-section="${name}"]`); if (!section) return; setSectionCollapsed(name, !section.classList.contains('collapsed')); }
-      function applyDisplayMode(mode, markCustom = true) { if (mode === 'detailed') { showDelta.checked = true; showTimestamp.checked = true; compactMode.checked = false; } else if (mode === 'compact') { showDelta.checked = false; showTimestamp.checked = false; compactMode.checked = true; } else if (markCustom) displayMode.value = 'custom'; }
-      function convertThresholds(fromUnit, toUnit) { if (fromUnit === toUnit) return; const low = Number(lowThreshold.value || 0), high = Number(highThreshold.value || 0); if (fromUnit === 'mgdl' && toUnit === 'mmol') { lowThreshold.value = (low / 18).toFixed(1); highThreshold.value = (high / 18).toFixed(1); } else if (fromUnit === 'mmol' && toUnit === 'mgdl') { lowThreshold.value = String(Math.round(low * 18)); highThreshold.value = String(Math.round(high * 18)); } }
-      function applySourceVisibility() { const source = sourceType.value; document.querySelectorAll('.source-panel').forEach((panel) => { panel.style.display = panel.dataset.sourcePanel === source ? '' : 'none'; }); }
-      function doSave() {
-        if (!websocket || websocket.readyState !== 1) return;
+
+      function hydrate(settings) {
+        const mergedSettings = lockedSourceType ? { ...settings, sourceType: lockedSourceType } : settings;
+        for (const field of fields) {
+          const sourceSelector = document.getElementById('sourceType');
+          if (sourceSelector && lockedSourceType) sourceSelector.value = lockedSourceType;
+          const el = document.getElementById(field);
+          if (!el) continue;
+          if (field === 'dexcomPassword') {
+            el.value = '';
+            continue;
+          }
+          if (el.type === 'checkbox') el.checked = Boolean(mergedSettings[field] ?? el.checked);
+          else if (mergedSettings[field] !== undefined) el.value = mergedSettings[field];
+        }
+        applyDisplayMode(document.getElementById('displayMode').value || 'detailed', false);
+        lastUnit = document.getElementById('unit').value || 'mgdl';
+        applySourceVisibility();
+      }
+
+      function payload() {
+        const settings = {
+          sourceType: lockedSourceType || document.getElementById('sourceType').value,
+          baseUrl: document.getElementById('baseUrl').value.trim(),
+          dexcomUsername: document.getElementById('dexcomUsername').value.trim(),
+          dexcomAccountId: document.getElementById('dexcomAccountId').value.trim(),
+          dexcomRegion: document.getElementById('dexcomRegion').value,
+          lowThreshold: Number(document.getElementById('lowThreshold').value || 80),
+          highThreshold: Number(document.getElementById('highThreshold').value || 180),
+          staleMinutes: Number(document.getElementById('staleMinutes').value || 15),
+          pollSeconds: Number(document.getElementById('pollSeconds').value || 305),
+          showDelta: document.getElementById('showDelta').checked,
+          showTimestamp: document.getElementById('showTimestamp').checked,
+          unit: document.getElementById('unit').value,
+          compactMode: document.getElementById('compactMode').checked,
+          displayMode: document.getElementById('displayMode').value,
+          okColor: document.getElementById('okColor').value,
+          lowColor: document.getElementById('lowColor').value,
+          highColor: document.getElementById('highColor').value,
+          staleColor: document.getElementById('staleColor').value,
+          nodataColor: document.getElementById('nodataColor').value,
+          errorColor: document.getElementById('errorColor').value,
+          setupColor: document.getElementById('setupColor').value,
+        };
+        const dexcomPassword = document.getElementById('dexcomPassword').value;
+        if (dexcomPassword) settings.dexcomPassword = dexcomPassword;
+        return settings;
+      }
+
+      function setVerifyStatus(message, kind) {
+        const el = document.getElementById('verifyStatus');
+        el.hidden = false;
+        el.textContent = message;
+        el.className = `status ${kind || ''}`.trim();
+      }
+
+      async function fetchJsonWithTimeout(url, init) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        try {
+          const response = await fetch(url, { ...(init || {}), signal: controller.signal });
+          const text = await response.text();
+          let data = null;
+          try { data = text ? JSON.parse(text) : null; } catch {}
+          return { response, data, text };
+        } finally {
+          clearTimeout(timeout);
+        }
+      }
+
+      function dexcomConfig(settings) {
+        const region = settings.dexcomRegion || 'us';
+        const baseUrls = {
+          us: 'https://share2.dexcom.com/ShareWebServices/Services/',
+          ous: 'https://shareous1.dexcom.com/ShareWebServices/Services/',
+          jp: 'https://share.dexcom.jp/ShareWebServices/Services/',
+        };
+        const appIds = {
+          us: 'd89443d2-327c-4a6f-89e5-496bbb0317db',
+          ous: 'd89443d2-327c-4a6f-89e5-496bbb0317db',
+          jp: 'd8665ade-9673-4e27-9ff6-92db4ce13d13',
+        };
+        return { baseUrl: baseUrls[region], applicationId: appIds[region] };
+      }
+
+      async function verifyNightscout(settings) {
+        if (!settings.baseUrl) throw new Error('Nightscout URL missing');
+        const base = settings.baseUrl.replace(/\/$/, '');
+        const url = `${base}/api/v1/entries.json?count=1`;
+        const { response, data } = await fetchJsonWithTimeout(url);
+        if (!response.ok) throw new Error(`Nightscout returned ${response.status}`);
+        if (!Array.isArray(data) || !data.length || data[0].sgv == null) throw new Error('No Nightscout reading found');
+        return `Nightscout OK — ${data[0].sgv}${settings.unit === 'mmol' ? ' mg/dL raw' : ' mg/dL'} latest reading loaded.`;
+      }
+
+      async function verifyDexcom(settings) {
+        if (!settings.dexcomPassword || (!settings.dexcomUsername && !settings.dexcomAccountId)) {
+          throw new Error('Dexcom credentials incomplete');
+        }
+        const { baseUrl, applicationId } = dexcomConfig(settings);
+        let accountId = settings.dexcomAccountId;
+        if (!accountId) {
+          const auth = await fetchJsonWithTimeout(`${baseUrl}General/AuthenticatePublisherAccount`, {
+            method: 'POST',
+            headers: { 'Accept-Encoding': 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accountName: settings.dexcomUsername, password: settings.dexcomPassword, applicationId }),
+          });
+          if (!auth.response.ok) throw new Error(auth.data?.Message || auth.data?.Code || 'Dexcom authentication failed');
+          accountId = auth.data;
+        }
+        const login = await fetchJsonWithTimeout(`${baseUrl}General/LoginPublisherAccountById`, {
+          method: 'POST',
+          headers: { 'Accept-Encoding': 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accountId, password: settings.dexcomPassword, applicationId }),
+        });
+        if (!login.response.ok) throw new Error(login.data?.Message || login.data?.Code || 'Dexcom login failed');
+        const sessionId = login.data;
+        const url = new URL(`${baseUrl}Publisher/ReadPublisherLatestGlucoseValues`);
+        url.searchParams.set('sessionId', sessionId);
+        url.searchParams.set('minutes', '10');
+        url.searchParams.set('maxCount', '1');
+        const readings = await fetchJsonWithTimeout(url.toString(), { method: 'POST', headers: { 'Accept-Encoding': 'application/json' } });
+        if (!readings.response.ok) throw new Error(readings.data?.Message || readings.data?.Code || 'Dexcom reading fetch failed');
+        if (!Array.isArray(readings.data) || !readings.data.length || readings.data[0].Value == null) throw new Error('No Dexcom reading found');
+        return `Dexcom Share OK — ${readings.data[0].Value} mg/dL latest reading loaded.`;
+      }
+
+      async function verifyCurrentSettings() {
         const settings = payload();
-        const targets = [...new Set([actionContext, context].filter(Boolean))];
-        targets.forEach((targetContext) => {
-          websocket.send(JSON.stringify({ event: 'setSettings', context: targetContext, payload: settings }));
-          websocket.send(JSON.stringify({ event: 'sendToPlugin', action: actionUUID, context: targetContext, payload: settings }));
+        setVerifyStatus('Verifying…', 'busy');
+        try {
+          const message = settings.sourceType === 'dexcomShare'
+            ? await verifyDexcom(settings)
+            : await verifyNightscout(settings);
+          setVerifyStatus(message, 'ok');
+        } catch (error) {
+          setVerifyStatus(error?.message || 'Verification failed', 'err');
+        }
+      }
+
+      function setSectionCollapsed(name, collapsed) {
+        const section = document.querySelector(`.section[data-section="${name}"]`);
+        if (!section) return;
+        section.classList.toggle('collapsed', collapsed);
+        const chev = section.querySelector('.chevron');
+        if (chev) chev.textContent = collapsed ? '▸' : '▾';
+      }
+
+      function toggleSection(name) {
+        const section = document.querySelector(`.section[data-section="${name}"]`);
+        if (!section) return;
+        setSectionCollapsed(name, !section.classList.contains('collapsed'));
+      }
+
+      function applyDisplayMode(mode, markCustom = true) {
+        const showDelta = document.getElementById('showDelta');
+        const showTimestamp = document.getElementById('showTimestamp');
+        const compactMode = document.getElementById('compactMode');
+        if (mode === 'detailed') {
+          showDelta.checked = true;
+          showTimestamp.checked = true;
+          compactMode.checked = false;
+        } else if (mode === 'compact') {
+          showDelta.checked = false;
+          showTimestamp.checked = false;
+          compactMode.checked = true;
+        } else if (markCustom) {
+          document.getElementById('displayMode').value = 'custom';
+        }
+      }
+
+      function convertThresholds(fromUnit, toUnit) {
+        if (fromUnit === toUnit) return;
+        const lowEl = document.getElementById('lowThreshold');
+        const highEl = document.getElementById('highThreshold');
+        const low = Number(lowEl.value || 0);
+        const high = Number(highEl.value || 0);
+        if (fromUnit === 'mgdl' && toUnit === 'mmol') {
+          lowEl.value = (low / 18).toFixed(1);
+          highEl.value = (high / 18).toFixed(1);
+        } else if (fromUnit === 'mmol' && toUnit === 'mgdl') {
+          lowEl.value = String(Math.round(low * 18));
+          highEl.value = String(Math.round(high * 18));
+        }
+      }
+
+      function applySourceVisibility() {
+        const source = lockedSourceType || document.getElementById('sourceType').value;
+        const sourceCard = document.querySelector('.section[data-section="source"]');
+        if (sourceCard) sourceCard.hidden = Boolean(lockedSourceType);
+        const selector = document.getElementById('sourceType');
+        if (selector && lockedSourceType) selector.value = lockedSourceType;
+        document.querySelectorAll('[data-source-panel]').forEach((panel) => {
+          panel.hidden = panel.getAttribute('data-source-panel') !== source;
         });
       }
-      window.addEventListener('DOMContentLoaded', () => { displayMode.addEventListener('change', (e) => applyDisplayMode(e.target.value, false)); ['showDelta','showTimestamp','compactMode'].forEach((id) => document.getElementById(id).addEventListener('change', () => applyDisplayMode('custom'))); unit.addEventListener('change', (e) => { const nextUnit = e.target.value; convertThresholds(lastUnit, nextUnit); lastUnit = nextUnit; }); sourceType.addEventListener('change', applySourceVisibility); save.addEventListener('click', doSave); document.querySelectorAll('.section-toggle').forEach((btn) => btn.addEventListener('click', () => toggleSection(btn.dataset.target))); Object.entries(sectionDefaults).forEach(([name, collapsed]) => setSectionCollapsed(name, collapsed)); applySourceVisibility(); });
+
+      document.getElementById('sourceType').addEventListener('change', applySourceVisibility);
+      document.getElementById('displayMode').addEventListener('change', (e) => applyDisplayMode(e.target.value, false));
+      ['showDelta', 'showTimestamp', 'compactMode'].forEach((id) => {
+        document.getElementById(id).addEventListener('change', () => applyDisplayMode('custom'));
+      });
+      document.getElementById('unit').addEventListener('change', (e) => {
+        const nextUnit = e.target.value;
+        convertThresholds(lastUnit, nextUnit);
+        lastUnit = nextUnit;
+      });
+
+      document.getElementById('save').addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!websocket || websocket.readyState !== 1) {
+          setVerifyStatus('Save unavailable — plugin socket not connected.', 'err');
+          return;
+        }
+        const settings = payload();
+        const contexts = Array.from(new Set([actionContext, uuid].filter(Boolean)));
+        contexts.forEach((context) => {
+          websocket.send(JSON.stringify({ event: 'setSettings', context, payload: settings }));
+          websocket.send(JSON.stringify({ event: 'setSettings', context, payload: { settings } }));
+          websocket.send(JSON.stringify({ action: actionInfo?.action, event: 'sendToPlugin', context, payload: settings }));
+          websocket.send(JSON.stringify({ action: actionInfo?.action, event: 'sendToPlugin', context, payload: { settings } }));
+        });
+        setVerifyStatus('Save sent to plugin.', 'busy');
+      });
+
+      document.getElementById('verify').addEventListener('click', () => {
+        void verifyCurrentSettings();
+      });
+
+      window.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.section-toggle').forEach((btn) => btn.addEventListener('click', () => toggleSection(btn.dataset.target)));
+        Object.entries(sectionDefaults).forEach(([name, collapsed]) => setSectionCollapsed(name, collapsed));
+        applySourceVisibility();
+      });
     </script>
   </body>
 </html>

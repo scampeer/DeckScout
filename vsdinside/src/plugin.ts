@@ -14,6 +14,19 @@ type ActionState = {
 };
 type IncomingEvent = { event: string; action?: string; context?: string; payload?: any };
 
+function sourceTypeForAction(action?: string): PluginSettings['sourceType'] | undefined {
+  if (!action) return undefined;
+  const lower = action.toLowerCase();
+  if (lower.includes('dexcom')) return 'dexcomShare';
+  if (lower.includes('nightscout') || lower.endsWith('.monitor')) return 'nightscout';
+  return undefined;
+}
+
+function applyActionDefaults(settings: PluginSettings | undefined, action?: string): Required<PluginSettings> {
+  const forcedSourceType = sourceTypeForAction(action);
+  return withDefaults(forcedSourceType ? { ...(settings ?? {}), sourceType: forcedSourceType } : settings);
+}
+
 const port = process.argv[3];
 const pluginUUID = process.argv[5];
 const registerEvent = process.argv[7];
@@ -23,6 +36,10 @@ const actions = new Map<string, ActionState>();
 ws.on('open', () => {
   ws.send(JSON.stringify({ uuid: pluginUUID, event: registerEvent }));
 });
+
+function requestSettings(context: string): void {
+  ws.send(JSON.stringify({ event: 'getSettings', context }));
+}
 
 ws.on('message', (buf: RawData) => {
   try {
@@ -42,8 +59,9 @@ async function handleEvent(data: IncomingEvent): Promise<void> {
   switch (data.event) {
     case 'willAppear': {
       if (!context) return;
-      const settings = withDefaults(data.payload?.settings);
+      const settings = applyActionDefaults(data.payload?.settings, data.action);
       actions.set(context, { settings, inFlight: false, fastPolling: true, hydrated: true });
+      requestSettings(context);
       restartCadence(context, Date.now());
       await refresh(context);
       break;
@@ -51,9 +69,7 @@ async function handleEvent(data: IncomingEvent): Promise<void> {
     case 'didReceiveSettings': {
       if (!context) return;
       const current = actions.get(context);
-      if (current?.hydrated) return;
-
-      const settings = withDefaults(data.payload?.settings ?? current?.settings);
+      const settings = applyActionDefaults(data.payload?.settings ?? current?.settings, data.action);
       actions.set(context, { ...(current ?? { settings, inFlight: false, fastPolling: true }), settings, hydrated: true });
       restartCadence(context, Date.now());
       await refresh(context);
@@ -73,7 +89,8 @@ async function handleEvent(data: IncomingEvent): Promise<void> {
     case 'sendToPlugin': {
       if (!context) return;
       const current = actions.get(context);
-      const settings = withDefaults({ ...(current?.settings ?? {}), ...(data.payload ?? {}) });
+      const incoming = data.payload?.settings ?? data.payload ?? {};
+      const settings = applyActionDefaults({ ...(current?.settings ?? {}), ...incoming }, data.action);
       actions.set(context, {
         ...(current ?? { settings, inFlight: false, fastPolling: true }),
         settings,
@@ -96,6 +113,8 @@ async function refresh(context: string, manual = false): Promise<void> {
     state.pendingRefresh = true;
     return;
   }
+
+  requestSettings(context);
 
   state.inFlight = true;
   state.pendingRefresh = false;
