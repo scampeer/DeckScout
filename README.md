@@ -61,7 +61,7 @@ Both builds support direct **Dexcom Share** access.
 
 You need:
 - Dexcom Share enabled in the Dexcom mobile app
-- at least one follower configured in Dexcom Share
+- **at least one follower configured in Dexcom Share** — this is required for the plugin to work properly
 - your **publisher account** credentials, not the follower credentials
 - the correct region selected:
   - `us`
@@ -69,6 +69,8 @@ You need:
   - `jp`
 
 This direct mode removes the Nightscout requirement for Dexcom users who want a simpler setup.
+
+> **Important:** if Dexcom Share has no follower configured, the Dexcom integration may fail even when the username, password, and region are correct.
 
 ## General setup guide
 

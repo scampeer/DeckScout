@@ -25,9 +25,11 @@ Use this if you want a direct-source setup without Nightscout.
 
 Dexcom Share requires:
 - Share enabled in the Dexcom app
-- at least one follower configured
+- **at least one follower configured**
 - your publisher account credentials
 - the correct region (`us`, `ous`, or `jp`)
+
+> **Important:** if Dexcom Share has no follower configured, the plugin may not work properly.
 
 ## Install (end users)
 

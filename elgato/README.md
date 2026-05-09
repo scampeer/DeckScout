@@ -45,6 +45,8 @@ If you're using the **Elgato Stream Deck app** with Elgato hardware (Stream Deck
 
 The key will start displaying your glucose within a few seconds. Dexcom Share uses the same publisher credentials you use in the Dexcom mobile app and requires Share to have at least one follower enabled.
 
+> **Important:** if there are no followers on Dexcom Share, the plugin may not work properly even if your login details are correct.
+
 ## Configuration
 
 | Setting | Default | Description |
@@ -75,7 +77,7 @@ Open the property inspector, choose **Nightscout**, enter your Nightscout URL, a
 The plugin couldn't reach Nightscout. Verify the URL works in your browser, check that the Stream Deck host can reach it (firewall, VPN, Tailscale, etc.), and confirm Nightscout's `/api/v1/entries.json` endpoint is reachable.
 
 **The key shows "Setup / Login needed" or "Err / Dexcom fail"**
-Check your Dexcom Share region and publisher credentials. Dexcom Share requires a follower relationship to exist on the Dexcom side, and phone-number usernames must include country code (for example `+11234567890`).
+Check your Dexcom Share region and publisher credentials. Dexcom Share requires at least one follower relationship to exist on the Dexcom side, and phone-number usernames must include country code (for example `+11234567890`).
 **The key shows "STALE"**
 Nightscout returned data, but the most recent reading is older than your "Stale after" threshold. This usually means an upstream collector (xDrip, Dexcom Share bridge, etc.) has stopped uploading.
 
